@@ -1025,7 +1025,9 @@
           sceneDirection.normalize();
           mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sceneDirection);
         }
-        mesh.scale.setScalar(1);
+        const earthBody = bodies.find(b => b.name === "Earth");
+        const earthR = earthBody ? getBodyVisualRadius(earthBody) : 1;
+        mesh.scale.setScalar(Math.max(0.05, earthR * 0.1));
       } else {
         const radius = getBodyVisualRadius(body);
         if (body.name === "Earth") {
@@ -1388,7 +1390,7 @@
     return {
       metersToUnits: view.metersToUnits || DEFAULT_METERS_TO_UNITS,
       radiusScale: view.radiusScale || DEFAULT_RADIUS_TO_UNITS,
-      useDisplayScale: view.useDisplayScale !== false,
+      useDisplayScale: view.useDisplayScale === true,
       minBodyRadius: view.minBodyRadius ?? 0.45,
       markers: view.markers !== false
     };

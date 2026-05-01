@@ -196,7 +196,7 @@
         { radius: 7.7857e11, color: "#5f4631", inclination: 0 }
       ],
       stepSeconds: 3600,
-      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.45, markers: true },
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.45, markers: true },
       camera: { position: [0, 85, 155], target: [0, 0, 0], maxDistance: 1200 },
       ui: { cameraTarget: "rocket", timeScale: 80 }
     },
@@ -219,7 +219,7 @@
       },
       referenceOrbits: [],
       stepSeconds: 3600,
-      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
       ui: { cameraTarget: "earth", timeScale: 40 }
     },
@@ -243,7 +243,7 @@
       },
       referenceOrbits: [],
       stepSeconds: 3600,
-      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
       ui: { cameraTarget: "earth", timeScale: 60 }
     },
@@ -432,7 +432,7 @@
       },
       referenceOrbits: [],
       stepSeconds: 3600,
-      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
       ui: { cameraTarget: "earth", timeScale: 60 }
     },
@@ -455,7 +455,7 @@
       },
       referenceOrbits: [],
       stepSeconds: 86400,
-      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
       ui: { cameraTarget: "earth", timeScale: 40 }
     }

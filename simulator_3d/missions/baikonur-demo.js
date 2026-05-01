@@ -286,6 +286,7 @@
     const headingDeg = resolveHeading(site, profile);
     const vehicle = { ...profile.vehicle };
     const isLunarMission = ["lunar-orbit", "artemis-2", "lunar-landing", "apollo-11"].includes(profile.programTemplate);
+    const isInterplanetary = profile.programTemplate === "interplanetary-note";
 
     const scenario = window.SolarScenarioData && window.SolarScenarioData.scenarios.find((s) => s.id === scenarioId);
     const isEclipticFrame = scenario && scenario.initialState && scenario.initialState.type === "vectors";
@@ -307,7 +308,7 @@
         preBurnSeconds: 1,
         nearEarthSeconds: 2,
         orbitSeconds: isLunarMission ? 20 : 10,
-        farSeconds: isLunarMission ? 300 : 60,
+        farSeconds: isInterplanetary ? 3600 : (isLunarMission ? 300 : 60),
         closeBodySeconds: isLunarMission ? 15 : 10,
         flybySeconds: isLunarMission ? 120 : 45
       },
@@ -395,7 +396,8 @@
           { t: 260, pitchDeg: 12 },
           { t: 420, pitchDeg: 0 }
         ] } },
-        { name: "interplanetary injection demo: engine 2400-2900s", start: 2400, end: 2900, throttle: 0.35, attitude: { mode: "prograde" } }
+        { name: "interplanetary injection: engine 2400-2900s", start: 2400, end: 2900, throttle: 0.35, attitude: { mode: "prograde" } },
+        { name: "mid-course correction: engine 86400-86700s", start: 86400, end: 86700, throttle: 0.02, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 7.2e7 } }
       ];
     }
 
@@ -413,7 +415,10 @@
         { name: "Hohmann 1 — raise apogee to 420km: engine 530-560s", start: 530, end: 560, throttle: 0.05, attitude: { mode: "prograde" } },
         { name: "coast to apogee", start: 560, end: 3277, throttle: 0, attitude: { mode: "prograde" } },
         { name: "Hohmann 2 — circularize 420km: engine 3277-3307s", start: 3277, end: 3307, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "phase to ISS rendezvous", start: 3307, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
+        { name: "correction 2 — phase adjust toward ISS: engine 3310-3360s", start: 3310, end: 3360, throttle: 0.025, attitude: { mode: "target-body", target: "ISS", leadSeconds: 1200 } },
+        { name: "coast to close approach", start: 3360, end: 18000, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } },
+        { name: "approach burn: engine 18000-18100s", start: 18000, end: 18100, throttle: 0.018, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } },
+        { name: "docking coast", start: 18100, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
       ];
     }
 

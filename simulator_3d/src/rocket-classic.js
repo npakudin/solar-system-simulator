@@ -219,7 +219,7 @@
       } else if (altitude < earth.radius * 20) {
         dt = Math.min(dt, timestep.orbitSeconds || 10);
       } else {
-        dt = Math.min(dt, timestep.farSeconds || 60);
+        dt = Math.min(dt, timestep.farSeconds || requestedDt);
       }
     }
 
