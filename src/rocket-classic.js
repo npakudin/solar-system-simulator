@@ -419,6 +419,10 @@
       return normalizeOrFallback(subtract(rocket.velocity, earth.velocity), up);
     }
 
+    if (attitude.mode === "retrograde") {
+      return normalizeOrFallback(multiply(subtract(rocket.velocity, earth.velocity), -1), up);
+    }
+
     if (attitude.mode === "target-body") {
       const target = findBody(bodies, attitude.target);
       if (target) {

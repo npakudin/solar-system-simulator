@@ -164,14 +164,108 @@
       programTemplate: "interplanetary-note",
       headingMode: "east",
       timeScale: 1
+    },
+    {
+      id: "soyuz-iss",
+      label: "Soyuz → ISS 420km",
+      scenarioIds: ["soyuz-iss-baikonur"],
+      targetOrbit: { name: "ISS 420km", inclinationDeg: 51.6 },
+      vehicle: { ...baseVehicle, dryMassKg: 7000, fuelMassKg: 280000, exhaustVelocityMps: 3300, maxMassFlowKgPerSec: 700 },
+      programTemplate: "soyuz-iss",
+      headingDeg: 63.33,
+      defaultLaunchSiteId: "baikonur",
+      timeScale: 1
+    },
+    {
+      id: "crew-dragon-iss",
+      label: "Crew Dragon → ISS 420km",
+      scenarioIds: ["crew-dragon-iss-ksc"],
+      targetOrbit: { name: "ISS 420km", inclinationDeg: 51.6 },
+      vehicle: { ...baseVehicle, dryMassKg: 12000, fuelMassKg: 480000, exhaustVelocityMps: 3500, maxMassFlowKgPerSec: 1200 },
+      programTemplate: "crew-dragon-iss",
+      headingDeg: 44.98,
+      defaultLaunchSiteId: "cape-canaveral",
+      timeScale: 1
+    },
+    {
+      id: "lunar-orbit",
+      label: "Lunar orbit insertion",
+      scenarioIds: ["lunar-orbit-mission"],
+      targetOrbit: { name: "Lunar orbit 100km", inclinationDeg: 51.6 },
+      vehicle: { ...heavyVehicle },
+      programTemplate: "lunar-orbit",
+      headingDeg: 63.33,
+      timeScale: 1
+    },
+    {
+      id: "artemis-2",
+      label: "Artemis II free return",
+      scenarioIds: ["artemis-2-free-return"],
+      targetOrbit: { name: "Artemis II free return", inclinationDeg: 51.6 },
+      vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
+      programTemplate: "artemis-2",
+      headingDeg: 63.33,
+      timeScale: 1
+    },
+    {
+      id: "lunar-landing",
+      label: "Lunar landing",
+      scenarioIds: ["lunar-landing-mission"],
+      targetOrbit: { name: "Lunar surface", inclinationDeg: 51.6 },
+      vehicle: { ...heavyVehicle, fuelMassKg: 480000 },
+      programTemplate: "lunar-landing",
+      headingDeg: 63.33,
+      timeScale: 1
+    },
+    {
+      id: "vostok-1",
+      label: "Vostok 1 — Gagarin",
+      scenarioIds: ["vostok-1"],
+      targetOrbit: { name: "Vostok 1 orbit", inclinationDeg: 64.95 },
+      vehicle: { ...baseVehicle, dryMassKg: 4700, fuelMassKg: 180000, exhaustVelocityMps: 3100, maxMassFlowKgPerSec: 600 },
+      programTemplate: "vostok-1",
+      headingDeg: 43,
+      timeScale: 1
+    },
+    {
+      id: "apollo-11",
+      label: "Apollo 11",
+      scenarioIds: ["apollo-11"],
+      targetOrbit: { name: "Moon surface (Sea of Tranquility)", inclinationDeg: 51.6 },
+      vehicle: { ...heavyVehicle, fuelMassKg: 480000 },
+      programTemplate: "apollo-11",
+      headingDeg: 63.33,
+      timeScale: 1
+    },
+    {
+      id: "jupiter-return",
+      label: "Jupiter gravity assist → Earth return",
+      scenarioIds: ["jupiter-earth-return"],
+      targetOrbit: { name: "Jupiter flyby return", inclinationDeg: 0 },
+      vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
+      programTemplate: "interplanetary-note",
+      headingMode: "east",
+      timeScale: 1
+    },
+    {
+      id: "voyager-2",
+      label: "Voyager 2 grand tour",
+      scenarioIds: ["voyager-2-grand-tour"],
+      targetOrbit: { name: "Outer planets grand tour", inclinationDeg: 0 },
+      vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
+      programTemplate: "interplanetary-note",
+      headingMode: "east",
+      timeScale: 1
     }
   ];
 
   function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
-    const site = launchSites.find((item) => item.id === launchSiteId) || launchSites[0];
     const profile = targetProfiles.find((item) => {
       return item.id === targetProfileId && item.scenarioIds.includes(scenarioId);
     }) || firstProfileForScenario(scenarioId);
+
+    const preferredSiteId = (profile && profile.defaultLaunchSiteId) || launchSiteId;
+    const site = launchSites.find((item) => item.id === preferredSiteId) || launchSites[0];
 
     if (!site || !profile) {
       return null;
@@ -179,6 +273,7 @@
 
     const headingDeg = resolveHeading(site, profile);
     const vehicle = { ...profile.vehicle };
+    const isLunarMission = ["lunar-orbit", "artemis-2", "lunar-landing", "apollo-11"].includes(profile.programTemplate);
 
     return {
       id: `${site.id}-${profile.id}`,
@@ -191,11 +286,11 @@
       program: buildProgram(profile, headingDeg),
       timestep: {
         thrustSeconds: 0.5,
-        preBurnLookaheadSeconds: profile.programTemplate === "moon" ? 90 : 30,
+        preBurnLookaheadSeconds: isLunarMission ? 90 : 30,
         preBurnSeconds: 1,
         nearEarthSeconds: 2,
-        orbitSeconds: profile.programTemplate === "moon" ? 20 : 10,
-        farSeconds: profile.programTemplate === "moon" ? 300 : 60
+        orbitSeconds: isLunarMission ? 20 : 10,
+        farSeconds: isLunarMission ? 300 : 60
       },
       metadata: {
         launchSite: site.name,
@@ -278,6 +373,121 @@
           { t: 420, pitchDeg: 0 }
         ] } },
         { name: "interplanetary injection demo: engine 2400-2900s", start: 2400, end: 2900, throttle: 0.35, attitude: { mode: "prograde" } }
+      ];
+    }
+
+    if (profile.programTemplate === "soyuz-iss" || profile.programTemplate === "crew-dragon-iss") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 38 },
+          { t: 280, pitchDeg: 4 }
+        ] } },
+        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize 200km: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "Hohmann 1 — raise apogee to 420km: engine 530-560s", start: 530, end: 560, throttle: 0.05, attitude: { mode: "prograde" } },
+        { name: "coast to apogee", start: 560, end: 3277, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "Hohmann 2 — circularize 420km: engine 3277-3307s", start: 3277, end: 3307, throttle: 0.05, attitude: { mode: "prograde" } },
+        { name: "phase to ISS rendezvous", start: 3307, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
+      ];
+    }
+
+    if (profile.programTemplate === "lunar-orbit") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 38 },
+          { t: 280, pitchDeg: 4 }
+        ] } },
+        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LEO: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "TLI burn: engine 530-620s", start: 530, end: 620, throttle: 0.9, attitude: { mode: "prograde" } },
+        { name: "coast to Moon — 5 days", start: 620, end: 430704, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "LOI burn — enter lunar orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } }
+      ];
+    }
+
+    if (profile.programTemplate === "artemis-2") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 38 },
+          { t: 280, pitchDeg: 4 }
+        ] } },
+        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LEO: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "TLI burn: engine 530-620s", start: 530, end: 620, throttle: 0.9, attitude: { mode: "prograde" } },
+        { name: "coast — free return trajectory", start: 620, end: 431220, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "MCC-1 correction: engine 431220-431225s", start: 431220, end: 431225, throttle: 0.1, attitude: { mode: "prograde" } },
+        { name: "coast — return to Earth", start: 431225, end: 864000, throttle: 0, attitude: { mode: "prograde" } }
+      ];
+    }
+
+    if (profile.programTemplate === "lunar-landing") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 38 },
+          { t: 280, pitchDeg: 4 }
+        ] } },
+        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LEO: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "TLI burn: engine 530-620s", start: 530, end: 620, throttle: 0.9, attitude: { mode: "prograde" } },
+        { name: "coast to Moon — 5 days", start: 620, end: 430704, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "LOI burn — enter lunar orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } },
+        { name: "coast in lunar orbit", start: 430900, end: 434311, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "DOI — lower perilune: engine 434311-434330s", start: 434311, end: 434330, throttle: 0.1, attitude: { mode: "retrograde" } },
+        { name: "coast to perilune", start: 434330, end: 437722, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "PDI — powered descent: engine 437722-437900s", start: 437722, end: 437900, throttle: 0.9, attitude: { mode: "retrograde" } }
+      ];
+    }
+
+    if (profile.programTemplate === "vostok-1") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-295s", start: 28, end: 295, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 42 },
+          { t: 295, pitchDeg: 5 }
+        ] } },
+        { name: "coast to circularization", start: 295, end: 350, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize: engine 350-420s", start: 350, end: 420, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "1 orbit coast", start: 420, end: 5786, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "deorbit burn: engine 5786-5840s", start: 5786, end: 5840, throttle: 0.3, attitude: { mode: "retrograde" } }
+      ];
+    }
+
+    if (profile.programTemplate === "apollo-11") {
+      return [
+        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 28, pitchDeg: 88 },
+          { t: 80, pitchDeg: 72 },
+          { t: 150, pitchDeg: 38 },
+          { t: 280, pitchDeg: 4 }
+        ] } },
+        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LEO: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "TLI burn: engine 530-620s", start: 530, end: 620, throttle: 0.9, attitude: { mode: "prograde" } },
+        { name: "coast to Moon — 3 days", start: 620, end: 430704, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "LOI burn — enter lunar orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } },
+        { name: "coast in lunar orbit", start: 430900, end: 434311, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "DOI — lower perilune: engine 434311-434330s", start: 434311, end: 434330, throttle: 0.1, attitude: { mode: "retrograde" } },
+        { name: "coast to perilune", start: 434330, end: 437722, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "PDI — powered descent: engine 437722-437900s", start: 437722, end: 437900, throttle: 0.9, attitude: { mode: "retrograde" } },
+        { name: "ascent from Moon surface: engine 439960-440140s", start: 439960, end: 440140, throttle: 0.6, attitude: { mode: "prograde" } },
+        { name: "coast to TEI window", start: 440140, end: 448600, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "TEI — trans-Earth injection: engine 448600-448700s", start: 448600, end: 448700, throttle: 0.4, attitude: { mode: "retrograde" } },
+        { name: "coast back to Earth", start: 448700, end: 708704, throttle: 0, attitude: { mode: "prograde" } }
       ];
     }
 

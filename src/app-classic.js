@@ -1,6 +1,7 @@
 (function () {
   const {
     constants,
+    checkLandings,
     createInitialBodies,
     distance,
     getScenario,
@@ -44,6 +45,7 @@
     Venus: constants.DAY * 2,
     Earth: constants.DAY * 2,
     Moon: constants.DAY / 8,
+    ISS: 600,
     Mars: constants.DAY * 3,
     Jupiter: constants.DAY * 10,
     Saturn: constants.DAY * 14,
@@ -62,6 +64,50 @@
   let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
   let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
   const cameraFollowOffset = new THREE.Vector3();
+
+  // --- ISS SGP4 tracking ---
+  // TLE for 2026-05-01 (NORAD 25544)
+  const ISS_TLE_LINE1 = '1 25544U 98067A   26120.50000000  .00016717  00000-0  10270-3 0  9001';
+  const ISS_TLE_LINE2 = '2 25544  51.6461 339.7939 0002234  43.0609 317.0704 15.48919811999999';
+
+  let _issSatrec = null;
+  let _issEpochMs = null;
+
+  function initISS() {
+    if (typeof satellite === 'undefined') {
+      console.warn('[ISS] satellite.js not loaded, SGP4 unavailable');
+      return;
+    }
+    _issSatrec = satellite.twoline2satrec(ISS_TLE_LINE1, ISS_TLE_LINE2);
+    _issEpochMs = Date.now();
+    console.log('[ISS] SGP4 initialised from hardcoded TLE');
+  }
+
+  function updateISSPosition(bodies, simulatedElapsedSeconds) {
+    const issBody = bodies.find((b) => b.name === 'ISS');
+    const earth = bodies.find((b) => b.name === 'Earth');
+    if (!issBody || !earth || !_issSatrec) return;
+
+    // Real-world time offset by simulated elapsed time
+    const nowMs = (_issEpochMs || Date.now()) + simulatedElapsedSeconds * 1000;
+    const nowDate = new Date(nowMs);
+
+    const posVel = satellite.propagate(_issSatrec, nowDate);
+    if (!posVel || !posVel.position) return;
+
+    // satellite.js returns km in ECI (J2000 Earth-centred inertial)
+    // Physics frame is also Cartesian m; convert km -> m
+    issBody.position.x = earth.position.x + posVel.position.x * 1000;
+    issBody.position.y = earth.position.y + posVel.position.y * 1000;
+    issBody.position.z = earth.position.z + posVel.position.z * 1000;
+
+    issBody.velocity.x = earth.velocity.x + posVel.velocity.x * 1000;
+    issBody.velocity.y = earth.velocity.y + posVel.velocity.y * 1000;
+    issBody.velocity.z = earth.velocity.z + posVel.velocity.z * 1000;
+  }
+
+  // Initialise ISS once satellite.js is available (it's loaded synchronously before this script)
+  initISS();
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#03050a");
@@ -156,6 +202,23 @@
     skySphere = sky;
     scene.add(sky);
   });
+
+  let ldemTexture = null;
+  let ldemCanvas = null;
+  let ldemImageData = null;
+  textureLoader.load('sim-assets/textures/nasa/moon_ldem_3_8bit.jpg', (tex) => {
+    ldemTexture = tex;
+    // Pre-bake into canvas for pixel lookup (used by collision detection)
+    const img = tex.image;
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    ldemCanvas = c;
+    ldemImageData = ctx.getImageData(0, 0, c.width, c.height);
+    window._ldemImageData = ldemImageData; // expose globally for physics
+  }, undefined, () => console.warn('LDEM texture skipped'));
 
   const launchSiteMarkers = [];
   fetch('src/data/launch-sites.json')
@@ -270,6 +333,28 @@
 
   window.addEventListener("resize", resizeRenderer);
   resizeRenderer();
+
+  // Landing result overlay
+  const landingOverlay = document.createElement('div');
+  landingOverlay.id = 'landing-overlay';
+  landingOverlay.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:24px 40px;border-radius:12px;font-size:24px;font-weight:bold;z-index:1000;text-align:center;border:2px solid #0f0;';
+  document.body.appendChild(landingOverlay);
+
+  window.showLandingResult = function(success, speedMs, bodyName) {
+    const body = bodyName || 'surface';
+    if (success) {
+      landingOverlay.style.borderColor = '#0f0';
+      landingOverlay.style.color = '#0f0';
+      landingOverlay.innerHTML = `✓ Soft landing on ${body}<br><span style="font-size:16px;color:#aaa">${speedMs.toFixed(1)} m/s impact speed</span>`;
+    } else {
+      landingOverlay.style.borderColor = '#f00';
+      landingOverlay.style.color = '#f00';
+      landingOverlay.innerHTML = `✗ Mission failed — ${body} impact<br><span style="font-size:16px;color:#aaa">${speedMs.toFixed(1)} m/s impact speed</span>`;
+    }
+    landingOverlay.style.display = 'block';
+    setTimeout(() => { landingOverlay.style.display = 'none'; }, 6000);
+  };
+
   requestAnimationFrame(animate);
 
   function animate(frameTime) {
@@ -300,6 +385,9 @@
         );
         stepSimulation(bodies, stepSeconds);
         elapsedSeconds += stepSeconds;
+        updateISSPosition(bodies, elapsedSeconds);
+        const rocketBody = bodies.find((b) => b.name === 'Rocket');
+        if (rocketBody) checkLandings(bodies, rocketBody, null);
         rocketSim && rocketSim.updateRocketAfterPhysics(
           rocketMissionState,
           bodies,
@@ -538,6 +626,11 @@
       return createSaturnMesh(body);
     }
 
+    if (body.name === 'ISS') {
+      const mat = new THREE.MeshBasicMaterial({ color: '#00ffff' });
+      return new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), mat);
+    }
+
     const isMoon = body.name === 'Moon';
     const material = new THREE.MeshStandardMaterial({
       color: body.color,
@@ -547,6 +640,10 @@
     if (textures[body.name]) {
       if (!isMoon) material.color.set('#ffffff');
       material.map = textures[body.name];
+    }
+    if (isMoon && ldemTexture) {
+      material.bumpMap = ldemTexture;
+      material.bumpScale = 0.015;
     }
     const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material);
     return createAxialBodyMesh(body, surface);

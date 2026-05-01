@@ -99,6 +99,15 @@
       axialTiltDeg: 28.32,
       rotationPeriodHours: 16.1,
       texturePath: "sim-assets/textures/solar-system-scope/neptune.jpg"
+    },
+    ISS: {
+      color: "#00ffff",
+      mass: 420000,
+      radius: 50,
+      displayScale: 80000,
+      isSatellite: true,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 1.54
     }
   };
 
@@ -152,6 +161,12 @@
       name: "Neptune",
       positionKm: [4466649796.470223, 164501369.7093467, -43872569.65846012],
       velocityKmS: [-0.1982435699795591, 5.05736665658193, 2.075671671595769]
+    },
+    {
+      // ISS placeholder — overwritten by SGP4 each step
+      name: "ISS",
+      positionKm: [-115303588.1221946 + 6781, -90149015.21680424, -39058177.14352452],
+      velocityKmS: [18.78105325476009, -20.9418215085781 + 7.66, -9.077597332868253]
     }
   ];
 
@@ -216,7 +231,7 @@
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
         epoch: "2026-05-01T00:00:00 TDB",
-        includeBodies: ["Sun", "Earth", "Moon", "Jupiter"],
+        includeBodies: ["Sun", "Earth", "Moon", "Jupiter", "ISS"],
         bodies: real20260501Bodies
       },
       rocket: {
@@ -239,7 +254,8 @@
       initialState: {
         type: "absolute",
         bodies: [
-          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] }
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "ISS", position: [6781000, 0, 0], velocity: [0, 7660, 0] }
         ]
       },
       rocket: {
@@ -264,7 +280,8 @@
         type: "absolute",
         bodies: [
           { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
-          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] }
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] },
+          { name: "ISS", position: [6781000, 0, 0], velocity: [0, 7660, 0] }
         ]
       },
       rocket: {
@@ -281,6 +298,166 @@
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 10, 22], target: [0, 0, 0], maxDistance: 260 },
       ui: { cameraTarget: "earth", timeScale: 200 }
+    },
+    {
+      id: "soyuz-iss-baikonur",
+      label: "Soyuz → МКС (Байконур)",
+      description: "Полная 7-манёврная схема Союза для стыковки с МКС",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] },
+          { name: "ISS", position: [6791000, 0, 0], velocity: [0, 7661, 0] }
+        ]
+      },
+      stepSeconds: 2,
+      view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
+      camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
+      ui: { cameraTarget: "earth", timeScale: 1 }
+    },
+    {
+      id: "crew-dragon-iss-ksc",
+      label: "Crew Dragon → МКС (KSC)",
+      description: "Полная схема Crew Dragon для стыковки с МКС",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] },
+          { name: "ISS", position: [6791000, 0, 0], velocity: [0, 7661, 0] }
+        ]
+      },
+      stepSeconds: 2,
+      view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
+      camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
+      ui: { cameraTarget: "earth", timeScale: 1 }
+    },
+    {
+      id: "lunar-orbit-mission",
+      label: "Выход на орбиту Луны",
+      description: "Перелёт к Луне и выход на лунную орбиту.",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] }
+        ]
+      },
+      stepSeconds: 30,
+      view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
+      camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
+      ui: { cameraTarget: "earth", timeScale: 200 }
+    },
+    {
+      id: "artemis-2-free-return",
+      label: "Artemis II — облёт Луны (2026)",
+      description: "Облёт Луны по траектории свободного возврата Artemis II.",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] }
+        ]
+      },
+      stepSeconds: 60,
+      view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
+      camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
+      ui: { cameraTarget: "earth", timeScale: 400 }
+    },
+    {
+      id: "lunar-landing-mission",
+      label: "Посадка на Луну",
+      description: "Полная схема посадки на Луну: ТЛИ, ЛОИ, DOI и PDI.",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] }
+        ]
+      },
+      stepSeconds: 10,
+      view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
+      camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
+      ui: { cameraTarget: "earth", timeScale: 200 }
+    },
+    {
+      id: "vostok-1",
+      label: "Восток 1 — Гагарин (1961)",
+      description: "Один виток вокруг Земли и тормозной импульс для возвращения.",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] }
+        ]
+      },
+      stepSeconds: 2,
+      view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
+      camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
+      ui: { cameraTarget: "earth", timeScale: 1 }
+    },
+    {
+      id: "apollo-11",
+      label: "Apollo 11 — посадка на Луну (1969)",
+      description: "Полная миссия Apollo 11: ТЛИ, ЛОИ, DOI, PDI, подъём и ТЭИ.",
+      initialState: {
+        type: "absolute",
+        bodies: [
+          { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
+          { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] }
+        ]
+      },
+      stepSeconds: 20,
+      view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
+      camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
+      ui: { cameraTarget: "earth", timeScale: 200 }
+    },
+    {
+      id: "jupiter-earth-return",
+      label: "Гравитационный манёвр Юпитера → возврат к Земле",
+      description: "Запуск к Юпитеру, гравитационный манёвр и возврат к Земле.",
+      initialState: {
+        type: "vectors",
+        units: { position: "km", velocity: "km/s" },
+        epoch: "2026-05-01T00:00:00 TDB",
+        includeBodies: ["Sun", "Earth", "Moon", "Jupiter"],
+        bodies: real20260501Bodies
+      },
+      rocket: {
+        mode: "earthProgradeKick",
+        altitudeEarthRadii: 9,
+        progradeDeltaV: 8069,
+        radialDeltaV: -1500,
+        outOfPlaneDeltaV: 0
+      },
+      referenceOrbits: [],
+      stepSeconds: 3600,
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
+      ui: { cameraTarget: "earth", timeScale: 60 }
+    },
+    {
+      id: "voyager-2-grand-tour",
+      label: "Voyager 2 — большой тур (1977)",
+      description: "Большой тур по внешним планетам: Юпитер, Сатурн, Уран, Нептун.",
+      initialState: {
+        type: "vectors",
+        units: { position: "km", velocity: "km/s" },
+        epoch: "2026-05-01T00:00:00 TDB",
+        bodies: real20260501Bodies
+      },
+      rocket: {
+        mode: "earthProgradeKick",
+        altitudeEarthRadii: 9,
+        progradeDeltaV: 8793,
+        radialDeltaV: 0,
+        outOfPlaneDeltaV: 800
+      },
+      referenceOrbits: [],
+      stepSeconds: 86400,
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
+      camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
+      ui: { cameraTarget: "earth", timeScale: 40 }
     }
   ];
 

@@ -24,7 +24,8 @@
       rotationPeriodHours = null,
       texturePath = null,
       ellipsoid = null,
-      rings = null
+      rings = null,
+      isSatellite = false
     }) {
       this.name = name;
       this.color = color;
@@ -39,6 +40,7 @@
       this.texturePath = texturePath;
       this.ellipsoid = ellipsoid;
       this.rings = rings;
+      this.isSatellite = isSatellite;
     }
   }
 
@@ -85,6 +87,7 @@
       texturePath: body.texturePath,
       ellipsoid: body.ellipsoid,
       rings: body.rings,
+      isSatellite: body.isSatellite || false,
       position: body.position,
       velocity: body.velocity
     });
@@ -197,7 +200,8 @@
       rotationPeriodHours: catalog.rotationPeriodHours || null,
       texturePath: catalog.texturePath || null,
       ellipsoid: catalog.ellipsoid || null,
-      rings: catalog.rings || null
+      rings: catalog.rings || null,
+      isSatellite: catalog.isSatellite || false
     };
   }
 
@@ -288,22 +292,43 @@
       for (let j = i + 1; j < bodies.length; j += 1) {
         const a = bodies[i];
         const b = bodies[j];
+        // Two satellites: skip entirely (negligible mutual influence)
+        if (a.isSatellite && b.isSatellite) continue;
         const dx = b.position.x - a.position.x;
         const dy = b.position.y - a.position.y;
         const dz = b.position.z - a.position.z;
         const dist2 = dx * dx + dy * dy + dz * dz + SOFTENING * SOFTENING;
         const invDist3 = 1 / (dist2 * Math.sqrt(dist2));
 
-        const aScale = G * b.mass * invDist3;
-        const bScale = G * a.mass * invDist3;
-
-        a.acceleration.x += dx * aScale;
-        a.acceleration.y += dy * aScale;
-        a.acceleration.z += dz * aScale;
-
-        b.acceleration.x -= dx * bScale;
-        b.acceleration.y -= dy * bScale;
-        b.acceleration.z -= dz * bScale;
+        // Satellites are massless for gravity purposes — they get pulled but don't pull
+        // Only apply acceleration to non-satellites as attractors (bScale) and to
+        // the attracted body (aScale) when the attractor is a non-satellite.
+        if (!a.isSatellite) {
+          // a is massive: a gets pulled toward b (only if b is also massive)
+          if (!b.isSatellite) {
+            const aScale = G * b.mass * invDist3;
+            const bScale = G * a.mass * invDist3;
+            a.acceleration.x += dx * aScale;
+            a.acceleration.y += dy * aScale;
+            a.acceleration.z += dz * aScale;
+            b.acceleration.x -= dx * bScale;
+            b.acceleration.y -= dy * bScale;
+            b.acceleration.z -= dz * bScale;
+          }
+          // b is a satellite: b gets pulled toward a (massive body)
+          else {
+            const bScale = G * a.mass * invDist3;
+            b.acceleration.x -= dx * bScale;
+            b.acceleration.y -= dy * bScale;
+            b.acceleration.z -= dz * bScale;
+          }
+        } else {
+          // a is a satellite: a gets pulled toward b (massive body, since sat+sat already skipped above)
+          const aScale = G * b.mass * invDist3;
+          a.acceleration.x += dx * aScale;
+          a.acceleration.y += dy * aScale;
+          a.acceleration.z += dz * aScale;
+        }
       }
     }
   }
@@ -356,13 +381,79 @@
     };
   }
 
+  // LDEM height lookup: returns terrain height in meters above mean Moon radius
+  function ldemHeightAt(latRad, lonRad) {
+    const imageData = window._ldemImageData;
+    if (!imageData) return 0;
+    const w = imageData.width;
+    const h = imageData.height;
+    // equirectangular: lon [-pi,pi] -> x [0,w], lat [-pi/2,pi/2] -> y [h,0]
+    const u = ((lonRad / Math.PI) + 1) / 2;
+    const v = 1 - ((latRad / (Math.PI / 2)) + 1) / 2;
+    const x = Math.floor(u * (w - 1));
+    const y = Math.floor(v * (h - 1));
+    const idx = (y * w + x) * 4;
+    const pixel = imageData.data[idx]; // 0-255
+    // LRO LDEM: min=-9150m, max=+10784m, range=19934m
+    return (pixel / 255) * 19934 - 9150;
+  }
+
+  function checkLandings(bodies, rocket, onLanding) {
+    if (!rocket || rocket._landed) return;
+
+    for (const body of bodies) {
+      if (body.name !== 'Moon' && body.name !== 'Earth') continue;
+
+      const dx = rocket.position.x - body.position.x;
+      const dy = rocket.position.y - body.position.y;
+      const dz = rocket.position.z - body.position.z;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      let surfaceRadius = body.radius;
+
+      if (body.name === 'Moon') {
+        // lat/lon relative to Moon
+        const latRad = Math.asin(dz / dist);
+        const lonRad = Math.atan2(dy, dx);
+        surfaceRadius = body.radius + ldemHeightAt(latRad, lonRad);
+      }
+
+      if (dist <= surfaceRadius + 100) { // 100m tolerance
+        // compute radial speed (impact speed)
+        const nx = dx / dist, ny = dy / dist, nz = dz / dist;
+        const relVx = rocket.velocity.x - body.velocity.x;
+        const relVy = rocket.velocity.y - body.velocity.y;
+        const relVz = rocket.velocity.z - body.velocity.z;
+        const impactSpeed = Math.abs(relVx * nx + relVy * ny + relVz * nz);
+
+        rocket._landed = true;
+        rocket.velocity.x = body.velocity.x;
+        rocket.velocity.y = body.velocity.y;
+        rocket.velocity.z = body.velocity.z;
+        rocket.position.x = body.position.x + nx * (surfaceRadius + 50);
+        rocket.position.y = body.position.y + ny * (surfaceRadius + 50);
+        rocket.position.z = body.position.z + nz * (surfaceRadius + 50);
+
+        const threshold = body.name === 'Moon' ? 5 : 10;
+        const success = impactSpeed <= threshold;
+        if (typeof window !== 'undefined' && window.showLandingResult) {
+          window.showLandingResult(success, impactSpeed, body.name);
+        }
+        if (onLanding) onLanding(success, impactSpeed, body.name);
+        return;
+      }
+    }
+  }
+
   window.SolarPhysics = {
     constants: { G, DAY, YEAR },
+    checkLandings,
     createInitialBodies,
     distance,
     getScenario,
     getScenarios,
     launchRocket,
+    ldemHeightAt,
     speed,
     stepSimulation
   };
