@@ -1,0 +1,206 @@
+{
+  "units": "SI",
+  "sources": [
+    "https://ssd.jpl.nasa.gov/planets/phys_par.html",
+    "https://ssd.jpl.nasa.gov/sats/phys_par/",
+    "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html",
+    "https://science.nasa.gov/moon/by-the-numbers/",
+    "https://www.wikidata.org/wiki/Q258129",
+    "https://www.esa.int/Science_Exploration/Space_Science/Baikonur_Cosmodrome",
+    "https://www.airports-worldwide.com/articles/article0704.php",
+    "https://latitude.to/satellite-map/us/united-states/23847/cape-canaveral-air-force-station-space-launch-complex-40",
+    "https://latitude.to/satellite-map/us/united-states/28303/vandenberg-afb-space-launch-complex-4",
+    "https://orbitalradar.com/spaceports/guiana-space-centre",
+    "https://orbitcodex.com/facilities/pad/plesetsk-cosmodrome",
+    "https://orbitalradar.com/spaceports/jiuquan",
+    "https://orbitalradar.com/spaceports/wenchang",
+    "https://wiki2.org/en/Yoshinobu_Launch_Complex",
+    "https://orbitalradar.com/spaceports/satish-dhawan",
+    "https://orbitalradar.com/spaceports/mahia",
+    "https://orbitalradar.com/spaceports/starbase",
+    "https://www.globenewswire.com/de/news-release/2014/05/23/639150/24324/en/Sea-Launch-Begins-Countdown-for-EUTELSAT-3B-Launch.html",
+    "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/specific-impulse/"
+  ],
+  "earth": {
+    "meanRadiusM": 6371008.4,
+    "equatorialRadiusM": 6378136.6,
+    "gmM3S2": 398600436000000,
+    "siderealRotationPeriodS": 86164.1,
+    "angularVelocityRadS": 0.00007292115,
+    "obliquityRad": 0.409093
+  },
+  "moon": {
+    "meanRadiusM": 1737400,
+    "gmM3S2": 4902800000000,
+    "massKg": 7.347673092e+22,
+    "semiMajorAxisM": 384400000,
+    "eccentricity": 0.0549,
+    "meanPerigeeM": 363300000,
+    "meanApogeeM": 405500000,
+    "orbitalPeriodS": 2360594.88,
+    "meanOrbitalSpeedMS": 1022,
+    "inclinationToEclipticRad": 0.0897972
+  },
+  "launchSites": {
+    "baikonurSite31_6": {
+      "latitudeRad": 0.802783582,
+      "longitudeRad": 1.109403995,
+      "latitudeDeg": 45.99611111,
+      "longitudeDeg": 63.56416667,
+      "displayName": "Baikonur Site 31/6",
+      "country": "Kazakhstan",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q258129",
+      "recommendedDefault": true
+    },
+    "baikonurSite1_5GagarinStart": {
+      "latitudeRad": 0.801460045,
+      "longitudeRad": 1.105530329,
+      "latitudeDeg": 45.920278,
+      "longitudeDeg": 63.342222,
+      "displayName": "Baikonur Site 1/5, Gagarin's Start",
+      "country": "Kazakhstan",
+      "sourceUrl": "https://wiki-gateway.eudic.net/wikipedia_en/Gagarin%27s_Start.html",
+      "recommendedDefault": false
+    },
+    "kennedyLc39A": {
+      "latitudeRad": 0.49931057980226723,
+      "longitudeRad": -1.406811008041101,
+      "latitudeDeg": 28.6083888889,
+      "longitudeDeg": -80.6043333333,
+      "displayName": "Kennedy Space Center LC-39A",
+      "country": "United States",
+      "sourceUrl": "https://www.airports-worldwide.com/articles/article0704.php",
+      "recommendedDefault": false
+    },
+    "capeCanaveralSlc40": {
+      "latitudeRad": 0.49850279015617475,
+      "longitudeRad": -1.406337093353005,
+      "latitudeDeg": 28.562106,
+      "longitudeDeg": -80.57718,
+      "displayName": "Cape Canaveral SLC-40",
+      "country": "United States",
+      "sourceUrl": "https://latitude.to/satellite-map/us/united-states/23847/cape-canaveral-air-force-station-space-launch-complex-40",
+      "recommendedDefault": false
+    },
+    "vandenbergSlc4E": {
+      "latitudeRad": 0.6044546438554401,
+      "longitudeRad": -2.1051009520249284,
+      "latitudeDeg": 34.6327,
+      "longitudeDeg": -120.6134,
+      "displayName": "Vandenberg SLC-4E",
+      "country": "United States",
+      "sourceUrl": "https://latitude.to/satellite-map/us/united-states/28303/vandenberg-afb-space-launch-complex-4",
+      "recommendedDefault": false
+    },
+    "guianaSpaceCentreKourou": {
+      "latitudeRad": 0.0913854396344231,
+      "longitudeRad": -0.9209858116678797,
+      "latitudeDeg": 5.236,
+      "longitudeDeg": -52.7686,
+      "displayName": "Guiana Space Centre, Kourou",
+      "country": "French Guiana / France",
+      "sourceUrl": "https://orbitalradar.com/spaceports/guiana-space-centre",
+      "recommendedDefault": false
+    },
+    "plesetskCosmodrome": {
+      "latitudeRad": 1.0982484318174317,
+      "longitudeRad": 0.708219703874259,
+      "latitudeDeg": 62.925,
+      "longitudeDeg": 40.578,
+      "displayName": "Plesetsk Cosmodrome",
+      "country": "Russia",
+      "sourceUrl": "https://orbitcodex.com/facilities/pad/plesetsk-cosmodrome",
+      "recommendedDefault": false
+    },
+    "jiuquanSatelliteLaunchCenter": {
+      "latitudeRad": 0.7148973335923894,
+      "longitudeRad": 1.7504081601176331,
+      "latitudeDeg": 40.9606,
+      "longitudeDeg": 100.291,
+      "displayName": "Jiuquan Satellite Launch Center",
+      "country": "China",
+      "sourceUrl": "https://orbitalradar.com/spaceports/jiuquan",
+      "recommendedDefault": false
+    },
+    "wenchangSpaceLaunchSite": {
+      "latitudeRad": 0.34233760613242775,
+      "longitudeRad": 1.9364602583802284,
+      "latitudeDeg": 19.6145,
+      "longitudeDeg": 110.951,
+      "displayName": "Wenchang Space Launch Site",
+      "country": "China",
+      "sourceUrl": "https://orbitalradar.com/spaceports/wenchang",
+      "recommendedDefault": false
+    },
+    "tanegashimaYoshinobu": {
+      "latitudeRad": 0.5306184906983481,
+      "longitudeRad": 2.285945008599573,
+      "latitudeDeg": 30.40222,
+      "longitudeDeg": 130.975,
+      "displayName": "Tanegashima Yoshinobu Launch Complex",
+      "country": "Japan",
+      "sourceUrl": "https://wiki2.org/en/Yoshinobu_Launch_Complex",
+      "recommendedDefault": false
+    },
+    "satishDhawanSriharikota": {
+      "latitudeRad": 0.23945742804437004,
+      "longitudeRad": 1.4002846401920586,
+      "latitudeDeg": 13.7199,
+      "longitudeDeg": 80.2304,
+      "displayName": "Satish Dhawan Space Centre, Sriharikota",
+      "country": "India",
+      "sourceUrl": "https://orbitalradar.com/spaceports/satish-dhawan",
+      "recommendedDefault": false
+    },
+    "rocketLabMahiaLc1": {
+      "latitudeRad": -0.6852424442717536,
+      "longitudeRad": 3.1043281287304625,
+      "latitudeDeg": -39.2615,
+      "longitudeDeg": 177.8649,
+      "displayName": "Rocket Lab Launch Complex 1, Mahia",
+      "country": "New Zealand",
+      "sourceUrl": "https://orbitalradar.com/spaceports/mahia",
+      "recommendedDefault": false
+    },
+    "spacexStarbaseBocaChica": {
+      "latitudeRad": 0.4537297549824619,
+      "longitudeRad": -1.6956641627995788,
+      "latitudeDeg": 25.9968,
+      "longitudeDeg": -97.1544,
+      "displayName": "SpaceX Starbase, Boca Chica",
+      "country": "United States",
+      "sourceUrl": "https://orbitalradar.com/spaceports/starbase",
+      "recommendedDefault": false
+    },
+    "northPoleArtificial": {
+      "latitudeRad": 1.5707963267948966,
+      "longitudeRad": 0,
+      "latitudeDeg": 90,
+      "longitudeDeg": 0,
+      "displayName": "Artificial North Pole launch site",
+      "country": "Artificial",
+      "sourceUrl": "https://en.wikipedia.org/wiki/North_Pole",
+      "recommendedDefault": false
+    },
+    "seaLaunchOdysseyEquator": {
+      "latitudeRad": 0,
+      "longitudeRad": -2.6878070480712677,
+      "latitudeDeg": 0,
+      "longitudeDeg": -154,
+      "displayName": "Sea Launch Odyssey, equatorial Pacific",
+      "country": "International waters",
+      "sourceUrl": "https://www.globenewswire.com/de/news-release/2014/05/23/639150/24324/en/Sea-Launch-Begins-Countdown-for-EUTELSAT-3B-Launch.html",
+      "note": "Interesting sea-launch preset: equator at 154 degrees west, maximizing Earth's rotational boost.",
+      "recommendedDefault": false
+    }
+  },
+  "rocketV1": {
+    "dryMassKg": 38000,
+    "fuelMassKg": 274000,
+    "wetMassKg": 312000,
+    "exhaustVelocityMS": 3000,
+    "maxMassFlowKgS": 1500,
+    "referenceVacuumIspS": 320.2,
+    "referenceSeaLevelIspS": 263.3
+  }
+}

@@ -1,0 +1,341 @@
+(function () {
+  const G = 6.67408e-11;
+  const DAY = 24 * 60 * 60;
+  const YEAR = 365.25 * DAY;
+  const SOFTENING = 1.0e7;
+  const KM_TO_M = 1000;
+
+  const scenarioData = window.SolarScenarioData || {
+    bodyCatalog: {},
+    defaultScenarioId: "jupiter-gravity-assist-handcrafted",
+    scenarios: []
+  };
+
+  class Body {
+    constructor({ name, color, mass, radius, position, velocity, displayScale = 1 }) {
+      this.name = name;
+      this.color = color;
+      this.mass = mass;
+      this.radius = radius;
+      this.position = { ...position };
+      this.velocity = { ...velocity };
+      this.acceleration = { x: 0, y: 0, z: 0 };
+      this.displayScale = displayScale;
+    }
+  }
+
+  function sqr(value) {
+    return value * value;
+  }
+
+  function circularBody({ name, color, mass, radius, orbitRadius, speed, phase, inclination = 0, displayScale = 1 }) {
+    const cosPhase = Math.cos(phase);
+    const sinPhase = Math.sin(phase);
+    const cosInc = Math.cos(inclination);
+    const sinInc = Math.sin(inclination);
+
+    const x = -orbitRadius * sinPhase;
+    const planarY = orbitRadius * cosPhase;
+    const y = planarY * cosInc;
+    const z = planarY * sinInc;
+
+    const vx = speed * cosPhase;
+    const planarVy = speed * sinPhase;
+    const vy = planarVy * cosInc;
+    const vz = planarVy * sinInc;
+
+    return new Body({
+      name,
+      color,
+      mass,
+      radius,
+      displayScale,
+      position: { x, y, z },
+      velocity: { x: vx, y: vy, z: vz }
+    });
+  }
+
+  function copyBody(body) {
+    return new Body({
+      name: body.name,
+      color: body.color,
+      mass: body.mass,
+      radius: body.radius,
+      displayScale: body.displayScale,
+      position: body.position,
+      velocity: body.velocity
+    });
+  }
+
+  function getScenarios() {
+    return scenarioData.scenarios;
+  }
+
+  function getScenario(scenarioId) {
+    return (
+      scenarioData.scenarios.find((scenario) => scenario.id === scenarioId) ||
+      scenarioData.scenarios.find((scenario) => scenario.id === scenarioData.defaultScenarioId) ||
+      scenarioData.scenarios[0]
+    );
+  }
+
+  function stopMassCenter(bodies) {
+    let totalMass = 0;
+    const momentum = { x: 0, y: 0, z: 0 };
+
+    for (const body of bodies) {
+      totalMass += body.mass;
+      momentum.x += body.velocity.x * body.mass;
+      momentum.y += body.velocity.y * body.mass;
+      momentum.z += body.velocity.z * body.mass;
+    }
+
+    for (const body of bodies) {
+      body.velocity.x -= momentum.x / totalMass;
+      body.velocity.y -= momentum.y / totalMass;
+      body.velocity.z -= momentum.z / totalMass;
+    }
+  }
+
+  function createInitialBodies(scenarioId) {
+    const scenario = getScenario(scenarioId);
+    const bodies = createBodiesForScenario(scenario);
+
+    if (scenario.initialState.stopMassCenter) {
+      stopMassCenter(bodies);
+    }
+
+    computeAccelerations(bodies);
+
+    return bodies;
+  }
+
+  function createBodiesForScenario(scenario) {
+    const initialState = scenario.initialState;
+    if (initialState.type === "vectors") {
+      const included = initialState.includeBodies && new Set(initialState.includeBodies);
+      return initialState.bodies
+        .filter((body) => !included || included.has(body.name))
+        .map((body) => createCatalogBody({
+          name: body.name,
+          position: vectorFromArray(body.positionKm, KM_TO_M),
+          velocity: vectorFromArray(body.velocityKmS, KM_TO_M)
+        }));
+    }
+
+    if (initialState.type === "absolute") {
+      return initialState.bodies.map((body) => createCatalogBody({
+        name: body.name,
+        position: vectorFromArray(body.position, 1),
+        velocity: vectorFromArray(body.velocity, 1)
+      }));
+    }
+
+    return initialState.bodies.map((body) => {
+      if (body.orbitRadius) {
+        return circularBody({
+          ...catalogDefaults(body.name),
+          orbitRadius: body.orbitRadius,
+          speed: body.speed,
+          phase: body.phase,
+          inclination: degreesToRadians(body.inclination || 0)
+        });
+      }
+
+      return createCatalogBody({
+        name: body.name,
+        position: vectorFromArray(body.position, 1),
+        velocity: vectorFromArray(body.velocity, 1)
+      });
+    });
+  }
+
+  function createCatalogBody({ name, position, velocity }) {
+    return new Body({
+      ...catalogDefaults(name),
+      position,
+      velocity
+    });
+  }
+
+  function catalogDefaults(name) {
+    const catalog = scenarioData.bodyCatalog[name];
+    if (!catalog) {
+      throw new Error(`Missing body catalog entry for ${name}`);
+    }
+
+    return {
+      name,
+      color: catalog.color,
+      mass: catalog.mass,
+      radius: catalog.radius,
+      displayScale: catalog.displayScale
+    };
+  }
+
+  function launchRocket(bodies, scenarioId) {
+    const scenario = getScenario(scenarioId);
+    const config = scenario.rocket || {};
+    const earth = bodies.find((body) => body.name === "Earth");
+    const sun = bodies.find((body) => body.name === "Sun");
+    if (!earth || bodies.some((body) => body.name === "Rocket")) {
+      return bodies;
+    }
+
+    const radial = sun
+      ? normalize(subtract(earth.position, sun.position))
+      : { x: 1, y: 0, z: 0 };
+    const prograde = normalizeOrFallback(earth.velocity, { x: 0, y: 1, z: 0 });
+    const outOfPlane = normalizeOrFallback(cross(radial, prograde), { x: 0, y: 0, z: 1 });
+    const launchAltitude = earth.radius * (config.altitudeEarthRadii || 9);
+
+    let extraVelocity;
+    if (config.mode === "localOrbitKick") {
+      const tangential = normalizeOrFallback(cross(outOfPlane, radial), { x: 0, y: 1, z: 0 });
+      extraVelocity = add(
+        multiply(tangential, config.tangentialDeltaV || 0),
+        multiply(radial, config.radialDeltaV || 0)
+      );
+    } else {
+      extraVelocity = add(
+        add(
+          multiply(prograde, config.progradeDeltaV || 0),
+          multiply(radial, config.radialDeltaV || 0)
+        ),
+        multiply(outOfPlane, config.outOfPlaneDeltaV || 0)
+      );
+    }
+
+    const rocket = new Body({
+      name: "Rocket",
+      color: "#f7f7f2",
+      mass: 1.0e3,
+      radius: 1.8e7,
+      displayScale: 1,
+      position: add(earth.position, multiply(radial, launchAltitude)),
+      velocity: add(earth.velocity, extraVelocity)
+    });
+
+    const nextBodies = [...bodies.map(copyBody), rocket];
+    computeAccelerations(nextBodies);
+    return nextBodies;
+  }
+
+  function stepSimulation(bodies, dt) {
+    for (const body of bodies) {
+      body.velocity.x += body.acceleration.x * dt * 0.5;
+      body.velocity.y += body.acceleration.y * dt * 0.5;
+      body.velocity.z += body.acceleration.z * dt * 0.5;
+
+      body.position.x += body.velocity.x * dt;
+      body.position.y += body.velocity.y * dt;
+      body.position.z += body.velocity.z * dt;
+    }
+
+    computeAccelerations(bodies);
+
+    for (const body of bodies) {
+      body.velocity.x += body.acceleration.x * dt * 0.5;
+      body.velocity.y += body.acceleration.y * dt * 0.5;
+      body.velocity.z += body.acceleration.z * dt * 0.5;
+    }
+  }
+
+  function distance(a, b) {
+    return Math.sqrt(sqr(a.x - b.x) + sqr(a.y - b.y) + sqr(a.z - b.z));
+  }
+
+  function speed(body) {
+    return Math.sqrt(sqr(body.velocity.x) + sqr(body.velocity.y) + sqr(body.velocity.z));
+  }
+
+  function computeAccelerations(bodies) {
+    for (const body of bodies) {
+      body.acceleration.x = 0;
+      body.acceleration.y = 0;
+      body.acceleration.z = 0;
+    }
+
+    for (let i = 0; i < bodies.length; i += 1) {
+      for (let j = i + 1; j < bodies.length; j += 1) {
+        const a = bodies[i];
+        const b = bodies[j];
+        const dx = b.position.x - a.position.x;
+        const dy = b.position.y - a.position.y;
+        const dz = b.position.z - a.position.z;
+        const dist2 = dx * dx + dy * dy + dz * dz + SOFTENING * SOFTENING;
+        const invDist3 = 1 / (dist2 * Math.sqrt(dist2));
+
+        const aScale = G * b.mass * invDist3;
+        const bScale = G * a.mass * invDist3;
+
+        a.acceleration.x += dx * aScale;
+        a.acceleration.y += dy * aScale;
+        a.acceleration.z += dz * aScale;
+
+        b.acceleration.x -= dx * bScale;
+        b.acceleration.y -= dy * bScale;
+        b.acceleration.z -= dz * bScale;
+      }
+    }
+  }
+
+  function add(a, b) {
+    return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+  }
+
+  function subtract(a, b) {
+    return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+  }
+
+  function multiply(v, value) {
+    return { x: v.x * value, y: v.y * value, z: v.z * value };
+  }
+
+  function normalize(v) {
+    const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    if (length === 0) {
+      return { x: 0, y: 0, z: 0 };
+    }
+    return { x: v.x / length, y: v.y / length, z: v.z / length };
+  }
+
+  function normalizeOrFallback(v, fallback) {
+    const normalized = normalize(v);
+    if (normalized.x === 0 && normalized.y === 0 && normalized.z === 0) {
+      return fallback;
+    }
+    return normalized;
+  }
+
+  function vectorFromArray(values, scale) {
+    return {
+      x: values[0] * scale,
+      y: values[1] * scale,
+      z: values[2] * scale
+    };
+  }
+
+  function degreesToRadians(value) {
+    return value * Math.PI / 180;
+  }
+
+  function cross(a, b) {
+    return {
+      x: a.y * b.z - a.z * b.y,
+      y: a.z * b.x - a.x * b.z,
+      z: a.x * b.y - a.y * b.x
+    };
+  }
+
+  window.SolarPhysics = {
+    constants: { G, DAY, YEAR },
+    createInitialBodies,
+    distance,
+    getScenario,
+    getScenarios,
+    launchRocket,
+    speed,
+    stepSimulation
+  };
+})();

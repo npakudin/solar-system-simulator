@@ -1,0 +1,160 @@
+{
+  "source": {
+    "collection": "Solar System Scope textures from Wikimedia Commons and direct Solar System Scope downloads",
+    "collectionUrl": "https://commons.wikimedia.org/wiki/Category:Solar_System_Scope",
+    "directSourceUrl": "https://www.solarsystemscope.com/textures/",
+    "license": "Mixed per texture entry; keep attribution."
+  },
+  "textures": [
+    {
+      "file": "sun.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 8k sun.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_sun.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Solarsystemscope_texture_8k_sun.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 3696361,
+      "width": 4096,
+      "height": 2048,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "http://solarsystemscope.com/textures"
+    },
+    {
+      "file": "mercury.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 8k mercury.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_mercury.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/2/27/Solarsystemscope_texture_8k_mercury.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 15035740,
+      "width": 8192,
+      "height": 4096,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "http://solarsystemscope.com/textures"
+    },
+    {
+      "file": "venus_surface.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 8k venus surface.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_venus_surface.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1c/Solarsystemscope_texture_8k_venus_surface.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 12523129,
+      "width": 8192,
+      "height": 4096,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "http://solarsystemscope.com/textures"
+    },
+    {
+      "file": "venus_atmosphere.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 4k venus atmosphere.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_4k_venus_atmosphere.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/5/57/Solarsystemscope_texture_4k_venus_atmosphere.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 1546146,
+      "width": 4096,
+      "height": 2048,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "https://solarsystemscope.com/textures"
+    },
+    {
+      "file": "earth_daymap.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 8k earth daymap.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_earth_daymap.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 4565076,
+      "width": 8192,
+      "height": 4096,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "http://solarsystemscope.com/textures"
+    },
+    {
+      "file": "earth_nightmap.jpg",
+      "commonsTitle": "File:Solarsystemscope texture 8k earth nightmap.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_earth_nightmap.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Solarsystemscope_texture_8k_earth_nightmap.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 3144468,
+      "width": 8192,
+      "height": 4096,
+      "license": "CC BY 4.0",
+      "artist": "Solar System Scope",
+      "credit": "http://solarsystemscope.com/textures"
+    },
+    {
+      "file": "moon.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_moon.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "mars.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_mars.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "jupiter.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "saturn.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_saturn.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "saturn_ring_alpha.png",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_saturn_ring_alpha.png",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "uranus.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/2k_uranus.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "neptune.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/2k_neptune.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "stars.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_stars.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    },
+    {
+      "file": "stars_milky_way.jpg",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_stars_milky_way.jpg",
+      "license": "Solar System Scope texture; see source page terms and keep attribution.",
+      "artist": "Solar System Scope",
+      "credit": "Solar System Scope"
+    }
+  ]
+}

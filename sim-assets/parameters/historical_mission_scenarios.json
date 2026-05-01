@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Historical mission seed catalog for building realistic simulation presets. These entries intentionally store event epochs, launch sites, bodies, targets, and source URLs; exact spacecraft state vectors should be generated separately from NASA/JPL Horizons or SPICE for the selected epoch.",
+  "units": {
+    "distance": "m unless explicitly tagged otherwise",
+    "angle": "deg",
+    "time": "UTC ISO-8601 where exact time is known"
+  },
+  "recommendedEphemeris": {
+    "source": "NASA/JPL Horizons VECTORS",
+    "frame": "ICRF",
+    "center": "solar-system-barycenter",
+    "vectorCorrection": "NONE",
+    "notes": [
+      "For launch and low Earth orbit scenarios, use Earth-centered propagation after building the initial Earth/Moon/Sun state.",
+      "For flyby missions, request spacecraft and target-body vectors at each listed event epoch, then fit or replay the segment.",
+      "For handcrafted playable versions, keep the historical epochs/encounters but allow scaled visual sizes and simplified patched-conics dynamics."
+    ]
+  },
+  "missions": [
+    {
+      "id": "vostok-1-gagarin-1961",
+      "displayName": "Vostok 1 / Yuri Gagarin",
+      "kind": "earth-orbit",
+      "agency": "Soviet space program",
+      "launchVehicle": "Vostok-K 8K72K",
+      "spacecraft": "Vostok-3KA No.3",
+      "crew": ["Yuri Gagarin"],
+      "launch": {
+        "epochUtc": "1961-04-12T06:07:00Z",
+        "siteRef": "baikonurSite1_5GagarinStart",
+        "siteName": "Baikonur Site 1/5, Gagarin's Start"
+      },
+      "orbit": {
+        "reference": "geocentric",
+        "regime": "low-earth-orbit",
+        "periapsisAltitudeKm": 181,
+        "apoapsisAltitudeKm": 327,
+        "inclinationDeg": 64.95,
+        "periodMinutes": 89.1,
+        "orbitsCompleted": 1
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1961-04-12T06:07:00Z", "body": "Earth" },
+        { "type": "orbit-insertion", "epochUtc": "1961-04-12T06:17:00Z", "body": "Earth" },
+        { "type": "retrofire", "epochUtc": "1961-04-12T07:25:00Z", "body": "Earth" },
+        { "type": "landing", "epochUtc": "1961-04-12T07:55:00Z", "body": "Earth" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Earth", "Rocket"],
+        "mode": "earth-launch-to-leo",
+        "notes": "Good first historical launch scenario: short duration, one orbit, Baikonur start, high-inclination orbit."
+      },
+      "sources": [
+        "https://www.esa.int/About_Us/50_years_of_ESA/50_years_of_humans_in_space/The_flight_of_Vostok_1",
+        "https://www.spacefacts.de/mission/english/vostok-1.htm"
+      ]
+    },
+    {
+      "id": "apollo-11-lunar-landing-1969",
+      "displayName": "Apollo 11 / First crewed Moon landing",
+      "kind": "lunar-landing",
+      "agency": "NASA",
+      "launchVehicle": "Saturn V SA-506",
+      "spacecraft": "Apollo CSM-107 Columbia + LM-5 Eagle",
+      "crew": ["Neil Armstrong", "Michael Collins", "Buzz Aldrin"],
+      "launch": {
+        "epochUtc": "1969-07-16T13:32:00Z",
+        "siteRef": "kennedyLc39A",
+        "siteName": "Kennedy Space Center LC-39A"
+      },
+      "landingSite": {
+        "body": "Moon",
+        "name": "Mare Tranquillitatis / Tranquility Base",
+        "latitudeDeg": 0.67416,
+        "longitudeDeg": 23.47314,
+        "coordinateFrame": "planetocentric Mean Earth/Polar Axis lunar reference system"
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1969-07-16T13:32:00Z", "body": "Earth" },
+        { "type": "trans-lunar-injection", "relativeToLaunch": "PT2H44M", "body": "Earth" },
+        { "type": "lunar-orbit-arrival", "epochUtc": "1969-07-19T17:21:50Z", "body": "Moon" },
+        { "type": "lunar-landing", "epochUtc": "1969-07-20T20:17:40Z", "body": "Moon" },
+        { "type": "lunar-liftoff", "epochUtc": "1969-07-21T17:54:00Z", "body": "Moon" },
+        { "type": "trans-earth-injection", "epochUtc": "1969-07-22T04:55:42Z", "body": "Moon" },
+        { "type": "splashdown", "epochUtc": "1969-07-24T16:50:35Z", "body": "Earth" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "Moon", "Rocket"],
+        "mode": "earth-to-moon-patched-conics",
+        "notes": "Good Moon-transfer preset. Start from KSC, use Earth parking orbit, TLI, lunar approach, and a simplified LM landing marker."
+      },
+      "sources": [
+        "https://www.nasa.gov/history/apollo-11-mission-overview/",
+        "https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo11info.html",
+        "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html"
+      ]
+    },
+    {
+      "id": "voyager-2-grand-tour-1977",
+      "displayName": "Voyager 2 / Grand Tour of the giant planets",
+      "kind": "outer-planet-flyby-chain",
+      "agency": "NASA / JPL",
+      "launchVehicle": "Titan IIIE-Centaur",
+      "spacecraft": "Voyager 2",
+      "horizonsTargets": {
+        "spacecraft": "-32",
+        "Jupiter": "599",
+        "Saturn": "699",
+        "Uranus": "799",
+        "Neptune": "899"
+      },
+      "launch": {
+        "epochUtc": "1977-08-20T14:29:44Z",
+        "siteName": "Cape Canaveral Launch Complex 41",
+        "siteCoordinates": {
+          "latitudeDeg": 28.5833333,
+          "longitudeDeg": -80.58306,
+          "sourceUrl": "https://military-history.fandom.com/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_41"
+        }
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1977-08-20T14:29:44Z", "body": "Earth" },
+        { "type": "jupiter-flyby", "epochUtc": "1979-07-09T00:00:00Z", "body": "Jupiter" },
+        { "type": "saturn-flyby", "epochUtc": "1981-08-25T00:00:00Z", "body": "Saturn" },
+        { "type": "uranus-flyby", "epochUtc": "1986-01-24T17:59:00Z", "body": "Uranus" },
+        { "type": "neptune-flyby", "epochUtc": "1989-08-25T03:56:00Z", "body": "Neptune" },
+        { "type": "interstellar-space", "epochUtc": "2018-11-05T00:00:00Z", "body": "Heliosphere" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "Jupiter", "Saturn", "Uranus", "Neptune", "Rocket"],
+        "mode": "long-range-flyby-chain",
+        "notes": "Best as a time-compressed heliocentric tour. Use real Horizons vectors for planets and spacecraft at flyby epochs; optionally fit simplified transfer arcs between events."
+      },
+      "sources": [
+        "https://science.nasa.gov/mission/voyager/voyager-2/",
+        "https://science.nasa.gov/mission/voyager/mission-overview/",
+        "https://www.jpl.nasa.gov/missions/voyager-2"
+      ]
+    },
+    {
+      "id": "rosetta-67p-2004",
+      "displayName": "Rosetta / Comet 67P Churyumov-Gerasimenko",
+      "kind": "comet-rendezvous-and-landing",
+      "agency": "ESA with NASA contributions",
+      "launchVehicle": "Ariane 5 G+",
+      "spacecraft": "Rosetta orbiter + Philae lander",
+      "horizonsTargets": {
+        "spacecraft": "-226",
+        "comet": "67P",
+        "Mars": "499",
+        "Earth": "399"
+      },
+      "launch": {
+        "epochUtc": "2004-03-02T07:17:00Z",
+        "siteRef": "guianaSpaceCentreKourou",
+        "siteName": "Guiana Space Centre, Kourou"
+      },
+      "target": {
+        "body": "67P/Churyumov-Gerasimenko",
+        "type": "comet"
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "2004-03-02T07:17:00Z", "body": "Earth" },
+        { "type": "earth-gravity-assist", "epochUtc": "2005-03-04T00:00:00Z", "body": "Earth" },
+        { "type": "mars-gravity-assist", "epochUtc": "2007-02-25T00:00:00Z", "body": "Mars" },
+        { "type": "earth-gravity-assist", "epochUtc": "2007-11-13T00:00:00Z", "body": "Earth" },
+        { "type": "asteroid-flyby", "epochUtc": "2008-09-05T00:00:00Z", "body": "2867 Steins" },
+        { "type": "earth-gravity-assist", "epochUtc": "2009-11-13T00:00:00Z", "body": "Earth" },
+        { "type": "asteroid-flyby", "epochUtc": "2010-07-10T00:00:00Z", "body": "21 Lutetia" },
+        { "type": "hibernation-start", "epochUtc": "2011-06-08T00:00:00Z", "body": "Spacecraft" },
+        { "type": "hibernation-wakeup", "epochUtc": "2014-01-20T00:00:00Z", "body": "Spacecraft" },
+        { "type": "comet-rendezvous", "epochUtc": "2014-08-06T00:00:00Z", "body": "67P/Churyumov-Gerasimenko" },
+        { "type": "philae-comet-landing", "epochUtc": "2014-11-12T17:32:00Z", "body": "67P/Churyumov-Gerasimenko" },
+        { "type": "comet-perihelion", "epochUtc": "2015-08-13T00:00:00Z", "body": "67P/Churyumov-Gerasimenko" },
+        { "type": "controlled-comet-impact", "epochUtc": "2016-09-30T00:00:00Z", "body": "67P/Churyumov-Gerasimenko" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "Mars", "67P/Churyumov-Gerasimenko", "Rocket"],
+        "mode": "gravity-assist-to-comet-rendezvous",
+        "notes": "Interesting because it uses Earth-Mars-Earth-Earth assists before comet rendezvous; too long for raw N-body at 1-hour steps, so use fitted arcs or Horizons replay."
+      },
+      "sources": [
+        "https://www.esa.int/Science_Exploration/Space_Science/Rosetta_overview",
+        "https://www.esa.int/Science_Exploration/Space_Science/Rosetta/Rosetta_factsheet",
+        "https://www.esa.int/Science_Exploration/Space_Science/2_March",
+        "https://www.esa.int/Our_Activities/Operations/Rosetta_operations"
+      ]
+    },
+    {
+      "id": "cassini-huygens-saturn-1997",
+      "displayName": "Cassini-Huygens / Saturn and Titan",
+      "kind": "outer-planet-orbiter-and-atmospheric-lander",
+      "agency": "NASA / ESA / ASI",
+      "launchVehicle": "Titan IVB/Centaur",
+      "spacecraft": "Cassini orbiter + Huygens probe",
+      "horizonsTargets": {
+        "spacecraft": "-82",
+        "Saturn": "699",
+        "Titan": "606"
+      },
+      "launch": {
+        "epochUtc": "1997-10-15T08:43:00Z",
+        "siteRef": "capeCanaveralSlc40",
+        "siteName": "Cape Canaveral SLC-40"
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1997-10-15T08:43:00Z", "body": "Earth" },
+        { "type": "venus-flyby", "epochUtc": "1998-04-26T00:00:00Z", "body": "Venus" },
+        { "type": "venus-flyby", "epochUtc": "1999-06-24T00:00:00Z", "body": "Venus" },
+        { "type": "earth-flyby", "epochUtc": "1999-08-18T00:00:00Z", "body": "Earth" },
+        { "type": "jupiter-flyby", "epochUtc": "2000-12-30T10:12:00Z", "body": "Jupiter" },
+        { "type": "saturn-orbit-insertion", "epochUtc": "2004-07-01T00:00:00Z", "body": "Saturn" },
+        { "type": "huygens-release", "epochUtc": "2004-12-24T00:00:00Z", "body": "Titan" },
+        { "type": "huygens-titan-descent", "epochUtc": "2005-01-14T00:00:00Z", "body": "Titan" },
+        { "type": "grand-finale-saturn-impact", "epochUtc": "2017-09-15T00:00:00Z", "body": "Saturn" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Venus", "Earth", "Jupiter", "Saturn", "Titan", "Rocket"],
+        "mode": "venus-earth-jupiter-gravity-assist-to-saturn",
+        "notes": "Good advanced scenario: VVEJGA trajectory to Saturn, then switch to Saturn-centered view for Cassini orbit and Huygens descent."
+      },
+      "sources": [
+        "https://science.nasa.gov/mission/cassini/quick-facts/",
+        "https://www.jpl.nasa.gov/missions/cassini-huygens",
+        "https://science.nasa.gov/mission/cassini-huygens"
+      ]
+    },
+    {
+      "id": "new-horizons-pluto-arrokoth-2006",
+      "displayName": "New Horizons / Pluto and Arrokoth",
+      "kind": "kuiper-belt-flyby",
+      "agency": "NASA / Johns Hopkins APL / SwRI",
+      "launchVehicle": "Atlas V 551",
+      "spacecraft": "New Horizons",
+      "horizonsTargets": {
+        "spacecraft": "-98",
+        "Jupiter": "599",
+        "Pluto": "999",
+        "Arrokoth": "486958"
+      },
+      "launch": {
+        "epochUtc": "2006-01-19T19:00:00Z",
+        "siteName": "Cape Canaveral Space Launch Complex 41",
+        "siteCoordinates": {
+          "latitudeDeg": 28.5833333,
+          "longitudeDeg": -80.58306,
+          "sourceUrl": "https://military-history.fandom.com/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_41"
+        }
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "2006-01-19T19:00:00Z", "body": "Earth" },
+        { "type": "jupiter-gravity-assist", "epochUtc": "2007-02-28T00:00:00Z", "body": "Jupiter" },
+        { "type": "pluto-flyby", "epochUtc": "2015-07-14T11:49:00Z", "body": "Pluto" },
+        { "type": "arrokoth-flyby", "epochUtc": "2019-01-01T00:00:00Z", "body": "Arrokoth" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "Jupiter", "Pluto", "Arrokoth", "Rocket"],
+        "mode": "jupiter-assist-to-kuiper-belt",
+        "notes": "A good high-speed escape scenario. Useful to test very large scene scale and long time acceleration."
+      },
+      "sources": [
+        "https://science.nasa.gov/mission/new-horizons/",
+        "https://www.nasa.gov/missions/new-horizons/exploring-the-unexplored-new-horizons-mission-to-pluto"
+      ]
+    },
+    {
+      "id": "giotto-halley-1985",
+      "displayName": "Giotto / Comet Halley",
+      "kind": "comet-flyby",
+      "agency": "ESA",
+      "launchVehicle": "Ariane 1",
+      "spacecraft": "Giotto",
+      "horizonsTargets": {
+        "spacecraft": "-23",
+        "comet": "1P"
+      },
+      "launch": {
+        "epochUtc": "1985-07-02T00:00:00Z",
+        "siteRef": "guianaSpaceCentreKourou",
+        "siteName": "Guiana Space Centre, Kourou"
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1985-07-02T00:00:00Z", "body": "Earth" },
+        { "type": "halley-flyby", "epochUtc": "1986-03-13T00:00:00Z", "body": "1P/Halley", "closestApproachKm": 596 },
+        { "type": "earth-gravity-assist", "epochUtc": "1990-07-02T00:00:00Z", "body": "Earth" },
+        { "type": "grigg-skjellerup-flyby", "epochUtc": "1992-07-10T00:00:00Z", "body": "26P/Grigg-Skjellerup", "closestApproachKm": 200 }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "1P/Halley", "26P/Grigg-Skjellerup", "Rocket"],
+        "mode": "comet-flyby",
+        "notes": "Shorter comet-flyby scenario than Rosetta. Good for showing a fast pass through a comet coma rather than rendezvous."
+      },
+      "sources": [
+        "https://science.nasa.gov/mission/giotto",
+        "https://www.esa.int/Science_Exploration/Space_Science/Giotto_overview",
+        "https://sci.esa.int/web/giotto/-/13515-the-halley-flyby"
+      ]
+    },
+    {
+      "id": "stardust-wild-2-sample-return-1999",
+      "displayName": "Stardust / Wild 2 sample return",
+      "kind": "comet-flyby-sample-return",
+      "agency": "NASA / JPL",
+      "launchVehicle": "Delta 7426-9.5",
+      "spacecraft": "Stardust",
+      "horizonsTargets": {
+        "comet": "81P",
+        "asteroid": "5535"
+      },
+      "launch": {
+        "epochUtc": "1999-02-07T21:04:15Z",
+        "siteName": "Cape Canaveral Launch Complex 17A"
+      },
+      "events": [
+        { "type": "launch", "epochUtc": "1999-02-07T21:04:15Z", "body": "Earth" },
+        { "type": "earth-gravity-assist", "epochUtc": "2001-01-15T00:00:00Z", "body": "Earth" },
+        { "type": "asteroid-flyby", "epochUtc": "2002-11-02T04:50:00Z", "body": "5535 Annefrank" },
+        { "type": "wild-2-comet-flyby", "epochUtc": "2004-01-02T19:22:00Z", "body": "81P/Wild 2", "closestApproachKm": 250 },
+        { "type": "sample-return-capsule-landing", "epochUtc": "2006-01-15T10:10:00Z", "body": "Earth" },
+        { "type": "tempel-1-extended-flyby", "epochUtc": "2011-02-15T00:00:00Z", "body": "9P/Tempel 1" }
+      ],
+      "suggestedSimulation": {
+        "bodies": ["Sun", "Earth", "5535 Annefrank", "81P/Wild 2", "9P/Tempel 1", "Rocket"],
+        "mode": "sample-return-with-earth-reentry",
+        "notes": "Good scenario if we add sample-return capsule visuals: heliocentric cruise, comet flyby, then high-speed Earth return."
+      },
+      "sources": [
+        "https://science.nasa.gov/mission/stardust",
+        "https://www.jpl.nasa.gov/missions/stardust",
+        "https://nssdc.gsfc.nasa.gov/planetary/stardust.html"
+      ]
+    }
+  ]
+}

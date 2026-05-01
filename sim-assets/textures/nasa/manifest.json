@@ -1,0 +1,36 @@
+{
+  "source": {
+    "collection": "NASA/GSFC texture sources",
+    "license": "NASA media, generally public domain; retain credit."
+  },
+  "textures": [
+    {
+      "file": "earth_blue_marble_august_21600.jpg",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-map/",
+      "downloadUrl": "https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/world_2km/world.topo.bathy.200408.3x21600x10800.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA Earth Observatory"
+    },
+    {
+      "file": "earth_clouds_2048.jpg",
+      "sourceUrl": "https://visibleearth.nasa.gov/images/57747/blue-marble-clouds",
+      "downloadUrl": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_2048.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA Visible Earth"
+    },
+    {
+      "file": "moon_lroc_color_2k.jpg",
+      "sourceUrl": "https://svs.gsfc.nasa.gov/4720/",
+      "downloadUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA/Goddard Space Flight Center Scientific Visualization Studio"
+    },
+    {
+      "file": "moon_ldem_3_8bit.jpg",
+      "sourceUrl": "https://svs.gsfc.nasa.gov/4720/",
+      "downloadUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA/Goddard Space Flight Center Scientific Visualization Studio"
+    }
+  ]
+}

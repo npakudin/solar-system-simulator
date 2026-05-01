@@ -1,0 +1,62 @@
+{
+  "Sun": {
+    "color": "#ffc247",
+    "mass": 1.989e+30,
+    "radius": 696340000,
+    "displayScale": 12
+  },
+  "Mercury": {
+    "color": "#b7a79a",
+    "mass": 3.3011e+23,
+    "radius": 2439700,
+    "displayScale": 1800
+  },
+  "Venus": {
+    "color": "#d8c18a",
+    "mass": 4.8675e+24,
+    "radius": 6051800,
+    "displayScale": 950
+  },
+  "Earth": {
+    "color": "#4f9cff",
+    "mass": 5.972e+24,
+    "radius": 6371000,
+    "displayScale": 900
+  },
+  "Moon": {
+    "color": "#b8bcc7",
+    "mass": 7.347673092e+22,
+    "radius": 1737400,
+    "displayScale": 1200
+  },
+  "Mars": {
+    "color": "#c56d4f",
+    "mass": 6.4171e+23,
+    "radius": 3389500,
+    "displayScale": 1300
+  },
+  "Jupiter": {
+    "color": "#d8a35d",
+    "mass": 1.8986e+27,
+    "radius": 69911000,
+    "displayScale": 200
+  },
+  "Saturn": {
+    "color": "#d7bd82",
+    "mass": 5.6834e+26,
+    "radius": 58232000,
+    "displayScale": 200
+  },
+  "Uranus": {
+    "color": "#8fd3df",
+    "mass": 8.681e+25,
+    "radius": 25362000,
+    "displayScale": 260
+  },
+  "Neptune": {
+    "color": "#5c8dff",
+    "mass": 1.02413e+26,
+    "radius": 24622000,
+    "displayScale": 260
+  }
+}
