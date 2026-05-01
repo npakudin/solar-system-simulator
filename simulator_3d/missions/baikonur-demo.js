@@ -415,10 +415,8 @@
         { name: "Hohmann 1 — raise apogee to 420km: engine 530-560s", start: 530, end: 560, throttle: 0.05, attitude: { mode: "prograde" } },
         { name: "coast to apogee", start: 560, end: 3277, throttle: 0, attitude: { mode: "prograde" } },
         { name: "Hohmann 2 — circularize 420km: engine 3277-3307s", start: 3277, end: 3307, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "correction 2 — phase adjust toward ISS: engine 3310-3360s", start: 3310, end: 3360, throttle: 0.025, attitude: { mode: "target-body", target: "ISS", leadSeconds: 1200 } },
-        { name: "coast to close approach", start: 3360, end: 18000, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } },
-        { name: "approach burn: engine 18000-18100s", start: 18000, end: 18100, throttle: 0.018, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } },
-        { name: "docking coast", start: 18100, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
+        { name: "correction 2 — phase adjust: engine 3310-3330s", start: 3310, end: 3330, throttle: 0.015, attitude: { mode: "prograde" } },
+        { name: "coast to ISS rendezvous", start: 3330, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
       ];
     }
 

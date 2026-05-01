@@ -301,8 +301,8 @@
     },
     {
       id: "soyuz-iss-baikonur",
-      label: "Soyuz → МКС (Байконур)",
-      description: "Полная 7-манёврная схема Союза для стыковки с МКС",
+      label: "Soyuz → ISS (Baikonur)",
+      description: "Full 7-maneuver Soyuz scheme for docking with ISS",
       initialState: {
         type: "absolute",
         bodies: [
@@ -318,8 +318,8 @@
     },
     {
       id: "crew-dragon-iss-ksc",
-      label: "Crew Dragon → МКС (KSC)",
-      description: "Полная схема Crew Dragon для стыковки с МКС",
+      label: "Crew Dragon → ISS (KSC)",
+      description: "Full Crew Dragon scheme for docking with ISS",
       initialState: {
         type: "absolute",
         bodies: [
@@ -335,8 +335,8 @@
     },
     {
       id: "lunar-orbit-mission",
-      label: "Выход на орбиту Луны",
-      description: "Перелёт к Луне и выход на лунную орбиту.",
+      label: "Lunar orbit insertion",
+      description: "Transfer to the Moon and lunar orbit insertion.",
       initialState: {
         type: "absolute",
         bodies: [
@@ -351,8 +351,8 @@
     },
     {
       id: "artemis-2-free-return",
-      label: "Artemis II — облёт Луны (2026)",
-      description: "Облёт Луны по траектории свободного возврата Artemis II.",
+      label: "Artemis II — Moon flyby (2026)",
+      description: "Lunar flyby on the Artemis II free-return trajectory.",
       initialState: {
         type: "absolute",
         bodies: [
@@ -367,8 +367,8 @@
     },
     {
       id: "lunar-landing-mission",
-      label: "Посадка на Луну",
-      description: "Полная схема посадки на Луну: ТЛИ, ЛОИ, DOI и PDI.",
+      label: "Lunar landing",
+      description: "Full lunar landing scheme: TLI, LOI, DOI, and PDI.",
       initialState: {
         type: "absolute",
         bodies: [
@@ -383,8 +383,8 @@
     },
     {
       id: "vostok-1",
-      label: "Восток 1 — Гагарин (1961)",
-      description: "Один виток вокруг Земли и тормозной импульс для возвращения.",
+      label: "Vostok 1 — Gagarin (1961)",
+      description: "One orbit around Earth and a deorbit burn to return.",
       initialState: {
         type: "absolute",
         bodies: [
@@ -398,8 +398,8 @@
     },
     {
       id: "apollo-11",
-      label: "Apollo 11 — посадка на Луну (1969)",
-      description: "Полная миссия Apollo 11: ТЛИ, ЛОИ, DOI, PDI, подъём и ТЭИ.",
+      label: "Apollo 11 — lunar landing (1969)",
+      description: "Full Apollo 11 mission: TLI, LOI, DOI, PDI, ascent, and TEI.",
       initialState: {
         type: "absolute",
         bodies: [
@@ -414,8 +414,8 @@
     },
     {
       id: "jupiter-earth-return",
-      label: "Гравитационный манёвр Юпитера → возврат к Земле",
-      description: "Запуск к Юпитеру, гравитационный манёвр и возврат к Земле.",
+      label: "Jupiter gravity assist → return to Earth",
+      description: "Launch to Jupiter, gravity assist maneuver, and return to Earth.",
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
@@ -438,8 +438,8 @@
     },
     {
       id: "voyager-2-grand-tour",
-      label: "Voyager 2 — большой тур (1977)",
-      description: "Большой тур по внешним планетам: Юпитер, Сатурн, Уран, Нептун.",
+      label: "Voyager 2 — grand tour (1977)",
+      description: "Grand tour of the outer planets: Jupiter, Saturn, Uranus, Neptune.",
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },

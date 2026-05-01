@@ -82,7 +82,7 @@
     Venus: constants.DAY * 2,
     Earth: constants.DAY * 2,
     Moon: constants.DAY / 8,
-    ISS: 600,
+    ISS: 60,
     Mars: constants.DAY * 3,
     Jupiter: constants.DAY * 10,
     Saturn: constants.DAY * 14,
@@ -658,6 +658,7 @@
   }
 
   function resetSimulation() {
+    landingOverlay.style.display = 'none';
     bodies = createInitialBodies(activeScenarioId);
     elapsedSeconds = 0;
     running = false;
