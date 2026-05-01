@@ -1,16 +1,20 @@
-(function () {
-  const {
-    constants,
-    checkLandings,
-    createInitialBodies,
-    distance,
-    getScenario,
-    getScenarios,
-    launchRocket,
-    speed,
-    stepSimulation
-  } = window.SolarPhysics;
-  const rocketSim = window.RocketSim;
+import { SolarPhysics, setLdemImageData } from './physics-classic.js';
+import { RocketSim as rocketSim } from './rocket-classic.js';
+import { SolarScenarioData } from './scenario-data.js';
+import { MeshFactory } from './mesh-factory.js';
+import { formatDuration, formatElapsedTime, formatCountdown, formatDist, formatCommand, firstBurnText } from './time-format.js';
+
+const {
+  constants,
+  checkLandings,
+  createInitialBodies,
+  distance,
+  getScenario,
+  getScenarios,
+  launchRocket,
+  speed,
+  stepSimulation
+} = SolarPhysics;
 
   const canvas = document.querySelector("#scene");
   const panel = document.querySelector(".panel");
@@ -76,7 +80,6 @@
     nearJupiter: 24,
     longCoast: 220
   };
-  const TRAIL_INITIAL_CAPACITY = 2000;
   const TRAIL_SAMPLE_SECONDS = {
     Sun: constants.DAY * 7,
     Mercury: constants.DAY * 2,
@@ -92,7 +95,7 @@
     Rocket: constants.DAY / 4
   };
 
-  let activeScenarioId = window.SolarScenarioData.defaultScenarioId;
+  let activeScenarioId = SolarScenarioData.defaultScenarioId;
   let activeScenario = getScenario(activeScenarioId);
   let bodies = createInitialBodies(activeScenarioId);
   let elapsedSeconds = 0;
@@ -239,15 +242,8 @@
   const trails = new Map();
   const markerGroup = new THREE.Group();
   const referenceOrbitGroup = new THREE.Group();
-  const pelletSystem = rocketSim
-    ? rocketSim.createPelletSystem(THREE, 2000, DEFAULT_METERS_TO_UNITS)
-    : null;
   scene.add(markerGroup);
   scene.add(referenceOrbitGroup);
-  if (pelletSystem) {
-    scene.add(pelletSystem.points);
-    pelletSystem.points.visible = false;
-  }
 
   const textures = {};
   let saturnRingTexture = null;
@@ -262,11 +258,11 @@
   }
 
   const BODY_TEXTURES = Object.fromEntries(
-    Object.entries(window.SolarScenarioData.bodyCatalog)
+    Object.entries(SolarScenarioData.bodyCatalog)
       .filter(([, body]) => body.texturePath)
       .map(([name, body]) => [name, body.texturePath])
   );
-  const saturnCatalog = window.SolarScenarioData.bodyCatalog.Saturn || {};
+  const saturnCatalog = SolarScenarioData.bodyCatalog.Saturn || {};
   const saturnRingTexturePath = saturnCatalog.rings && saturnCatalog.rings.texturePath;
 
   for (const [name, path] of Object.entries(BODY_TEXTURES)) {
@@ -302,6 +298,15 @@
   });
 
   let ldemTexture = null;
+  MeshFactory.init({
+    textures,
+    getLdemTexture: () => ldemTexture,
+    getSaturnRingTexture: () => saturnRingTexture,
+    getElapsed: () => elapsedSeconds,
+    getShowTrails: () => showTrailsInput.checked,
+  });
+  const { createBodyMesh, createTrail, resetTrail, applyBodyTexture, applySaturnRingTexture } = MeshFactory;
+  const _siteVec = new THREE.Vector3();
   let ldemCanvas = null;
   let ldemImageData = null;
   textureLoader.load('sim-assets/textures/nasa/moon_ldem_3_8bit.jpg', (tex) => {
@@ -315,26 +320,23 @@
     ctx.drawImage(img, 0, 0);
     ldemCanvas = c;
     ldemImageData = ctx.getImageData(0, 0, c.width, c.height);
-    window._ldemImageData = ldemImageData; // expose globally for physics
+    setLdemImageData(ldemImageData);
   }, undefined, () => console.warn('LDEM texture skipped'));
 
   const launchSiteMarkers = [];
-  fetch('src/data/launch-sites.json')
-    .then(r => r.json())
-    .then(sites => {
-      for (const site of sites) {
-        site.latRad = site.latDeg * Math.PI / 180;
-        site.lonRad = site.lonDeg * Math.PI / 180;
-        const dot = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 8, 6),
-          new THREE.MeshBasicMaterial({ color: '#ff6600' })
-        );
-        dot.visible = false;
-        scene.add(dot);
-        launchSiteMarkers.push({ site, dot });
-      }
-    })
-    .catch(() => console.warn('launch-sites.json failed'));
+  if (rocketSim) {
+    for (const site of rocketSim.launchSites()) {
+      site.latRad = site.latDeg * Math.PI / 180;
+      site.lonRad = site.lonDeg * Math.PI / 180;
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 8, 6),
+        new THREE.MeshBasicMaterial({ color: '#ff6600' })
+      );
+      dot.visible = false;
+      scene.add(dot);
+      launchSiteMarkers.push({ site, dot });
+    }
+  }
 
   populateScenarioSelect();
   populateLaunchSiteSelect();
@@ -354,7 +356,6 @@
     resetSimulation();
     applyScenarioUiDefaults();
     applyScenarioCamera();
-    syncPelletScale();
   });
 
   launchSiteSelect && launchSiteSelect.addEventListener("change", () => {
@@ -388,10 +389,6 @@
     if (mission) {
       if (!rocketMissionState) {
         rocketMissionState = rocketSim.createMissionState(mission, bodies, earthRotationOffsetSeconds);
-        if (pelletSystem) {
-          rocketSim.resetPelletSystem(pelletSystem);
-          pelletSystem.points.visible = true;
-        }
         if (mission.launchTimeScale != null) {
           timeScaleInput.value = timeScaleToSlider(mission.launchTimeScale);
           timeScaleNum.value = fmtTimeScale(mission.launchTimeScale);
@@ -508,19 +505,10 @@
 
   function updateLaunchWindowCountdown(remainingSeconds) {
     const el = document.getElementById('lw-countdown');
-    if (!el) return;
-    if (remainingSeconds <= 0) {
-      el.textContent = 'ЗАПУСК';
-      return;
-    }
-    const h = Math.floor(remainingSeconds / 3600);
-    const m = Math.floor((remainingSeconds % 3600) / 60);
-    const s = Math.floor(remainingSeconds % 60);
-    const pad = (n) => String(n).padStart(2, '0');
-    el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    if (el) el.textContent = formatCountdown(remainingSeconds);
   }
 
-  window.showLandingResult = function(success, speedMs, bodyName) {
+  function showLandingResult(success, speedMs, bodyName) {
     const body = bodyName || 'surface';
     if (success) {
       landingOverlay.style.borderColor = '#0f0';
@@ -539,61 +527,13 @@
 
   function animate(frameTime) {
     requestAnimationFrame(animate);
-
     const deltaMs = Math.min(frameTime - lastFrameTime, 80);
     lastFrameTime = frameTime;
 
     if (running) {
-      syncPelletScale();
       const playbackScale = getPlaybackTimeScale();
       syncDisplayedTimeScale(playbackScale);
-      let remainingSeconds = Math.max(playbackScale, 0.001) * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
-      let guard = 0;
-
-      while (remainingSeconds > 0 && guard < MAX_FRAME_SUBSTEPS) {
-        const scenarioStepSeconds = activeScenario.stepSeconds || BASE_STEP_SECONDS;
-        const requestedStepSeconds = Math.min(remainingSeconds, scenarioStepSeconds);
-        let stepSeconds = requestedStepSeconds;
-        if (rocketSim && rocketMissionState) {
-          stepSeconds = rocketSim.chooseStepSeconds(rocketMissionState, bodies, requestedStepSeconds);
-        }
-
-        stepSeconds = Math.min(stepSeconds, remainingSeconds);
-        rocketSim && rocketSim.updateRocketBeforePhysics(
-          rocketMissionState,
-          bodies,
-          stepSeconds,
-          pelletSystem
-        );
-        stepSimulation(bodies, stepSeconds);
-        elapsedSeconds += stepSeconds;
-        updateISSPosition(bodies, elapsedSeconds);
-
-        if (preLaunchPhase && launchWindowAtSeconds !== null && elapsedSeconds >= launchWindowAtSeconds) {
-          preLaunchPhase = false;
-          hideLaunchWindowOverlay();
-          const mission = currentMission();
-          activateLaunch(mission, launchWindowAtSeconds);
-        }
-
-        const rocketBody = bodies.find((b) => b.name === 'Rocket');
-        if (rocketBody && !(rocketMissionState && rocketMissionState.attachedToPad)) {
-          checkLandings(bodies, rocketBody, null);
-          if (rocketBody._landed) {
-            running = false;
-            break;
-          }
-        }
-        rocketSim && rocketSim.updateRocketAfterPhysics(
-          rocketMissionState,
-          bodies,
-          stepSeconds,
-          pelletSystem
-        );
-        appendTrailSamples();
-        remainingSeconds -= stepSeconds;
-        guard += 1;
-      }
+      stepPhysicsFrame(playbackScale);
     }
 
     updateMeshes();
@@ -605,6 +545,48 @@
       updateLaunchWindowCountdown(launchWindowAtSeconds - elapsedSeconds);
     }
     renderer.render(scene, camera);
+  }
+
+  function stepPhysicsFrame(playbackScale) {
+    let remainingSeconds = Math.max(playbackScale, 0.001) * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
+    let guard = 0;
+
+    while (remainingSeconds > 0 && guard < MAX_FRAME_SUBSTEPS) {
+      const scenarioStepSeconds = activeScenario.stepSeconds || BASE_STEP_SECONDS;
+      const requestedStepSeconds = Math.min(remainingSeconds, scenarioStepSeconds);
+      let stepSeconds = requestedStepSeconds;
+      if (rocketSim && rocketMissionState) {
+        stepSeconds = rocketSim.chooseStepSeconds(rocketMissionState, bodies, requestedStepSeconds);
+      }
+
+      stepSeconds = Math.min(stepSeconds, remainingSeconds);
+      rocketSim && rocketSim.updateRocketBeforePhysics(rocketMissionState, bodies, stepSeconds);
+      stepSimulation(bodies, stepSeconds);
+      elapsedSeconds += stepSeconds;
+      updateISSPosition(bodies, elapsedSeconds);
+      checkLaunchWindow();
+
+      const rocketBody = bodies.find((b) => b.name === 'Rocket');
+      if (rocketBody && !(rocketMissionState && rocketMissionState.attachedToPad)) {
+        checkLandings(bodies, rocketBody, showLandingResult);
+        if (rocketBody._landed) {
+          running = false;
+          break;
+        }
+      }
+      rocketSim && rocketSim.updateRocketAfterPhysics(rocketMissionState, bodies, stepSeconds);
+      appendTrailSamples();
+      remainingSeconds -= stepSeconds;
+      guard += 1;
+    }
+  }
+
+  function checkLaunchWindow() {
+    if (preLaunchPhase && launchWindowAtSeconds !== null && elapsedSeconds >= launchWindowAtSeconds) {
+      preLaunchPhase = false;
+      hideLaunchWindowOverlay();
+      activateLaunch(currentMission(), launchWindowAtSeconds);
+    }
   }
 
   function getPlaybackTimeScale() {
@@ -812,14 +794,9 @@
     rocketLaunched = false;
     flybyTargetIndex = 0;
     flybyTargetMinDist = Infinity;
-    if (rocketSim && pelletSystem) {
-      rocketSim.resetPelletSystem(pelletSystem);
-      pelletSystem.points.visible = false;
-    }
     runButton.textContent = "Start";
     syncSceneObjects();
     syncReferenceOrbits();
-    syncPelletScale();
     if (isMobileLayout()) {
       setPanelCollapsed(false);
       if (advancedControls) {
@@ -922,241 +899,6 @@
     option.value = value;
     option.textContent = label;
     cameraTargetSelect.append(option);
-  }
-
-  function createBodyMesh(body) {
-    if (body.name === "Rocket") {
-      const group = new THREE.Group();
-      const nose = new THREE.Mesh(
-        new THREE.ConeGeometry(0.28, 0.9, 20),
-        new THREE.MeshStandardMaterial({ color: body.color, roughness: 0.35, metalness: 0.2 })
-      );
-      const bodyMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.2, 0.2, 0.8, 20),
-        new THREE.MeshStandardMaterial({ color: "#c9ccd3", roughness: 0.45, metalness: 0.45 })
-      );
-      const flame = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, 0.55, 16),
-        new THREE.MeshBasicMaterial({ color: "#ff7b31", transparent: true, opacity: 0.75 })
-      );
-      nose.position.y = 0.65;
-      flame.position.y = -0.65;
-      flame.rotation.x = Math.PI;
-      group.add(nose, bodyMesh, flame);
-      return group;
-    }
-
-    if (body.name === "Sun") {
-      const mat = new THREE.MeshBasicMaterial({ color: body.color });
-      if (textures[body.name]) { mat.color.set('#ffffff'); mat.map = textures[body.name]; }
-      const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), mat);
-      return createAxialBodyMesh(body, surface);
-    }
-
-    if (body.name === "Saturn") {
-      return createSaturnMesh(body);
-    }
-
-    if (body.name === 'ISS') {
-      const mat = new THREE.MeshBasicMaterial({ color: '#00ffff' });
-      return new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), mat);
-    }
-
-    const isMoon = body.name === 'Moon';
-    const material = new THREE.MeshStandardMaterial({
-      color: body.color,
-      roughness: isMoon ? 0.9 : 0.6,
-      metalness: isMoon ? 0.0 : 0.05
-    });
-    if (textures[body.name]) {
-      if (!isMoon) material.color.set('#ffffff');
-      material.map = textures[body.name];
-    }
-    if (isMoon && ldemTexture) {
-      material.bumpMap = ldemTexture;
-      material.bumpScale = 0.015;
-    }
-    const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material);
-    return createAxialBodyMesh(body, surface);
-  }
-
-  function createAxialBodyMesh(body, surface) {
-    if (!Number.isFinite(body.axialTiltDeg)) {
-      return surface;
-    }
-
-    const root = new THREE.Group();
-    const axialGroup = new THREE.Group();
-    const spinGroup = new THREE.Group();
-    axialGroup.rotation.z = -body.axialTiltDeg * Math.PI / 180;
-    spinGroup.add(surface);
-    axialGroup.add(spinGroup);
-    root.add(axialGroup);
-    root.userData.axialGroup = axialGroup;
-    root.userData.spinNode = spinGroup;
-    root.userData.surface = surface;
-    return root;
-  }
-
-  function createSaturnMesh(body) {
-    const ringInnerRadius = body.rings ? body.rings.innerRadiusM / body.radius : 0;
-    const ringOuterRadius = body.rings ? body.rings.outerRadiusM / body.radius : 0;
-
-    const surfaceMaterial = new THREE.MeshStandardMaterial({
-      color: textures.Saturn ? "#ffffff" : body.color,
-      map: textures.Saturn || null,
-      roughness: 0.7,
-      metalness: 0.0
-    });
-    const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40), surfaceMaterial);
-    surface.name = "SaturnSurface";
-
-    const root = createAxialBodyMesh(body, surface);
-    const axialGroup = root.userData.axialGroup;
-
-    const rings = new THREE.Mesh(
-      createSaturnRingGeometry(ringInnerRadius, ringOuterRadius, 384),
-      new THREE.MeshBasicMaterial({
-        color: "#ffffff",
-        map: saturnRingTexture,
-        transparent: true,
-        opacity: 0.92,
-        alphaTest: 0.015,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      })
-    );
-    rings.name = "SaturnRings";
-    rings.renderOrder = 2;
-    axialGroup.add(rings);
-
-    const planetShadow = createSaturnPlanetShadow(ringInnerRadius, ringOuterRadius);
-    const ringShadow = createSaturnRingShadow();
-    axialGroup.add(planetShadow, ringShadow);
-
-    root.userData.rings = rings;
-    root.userData.saturnPlanetShadow = planetShadow;
-    root.userData.saturnRingShadow = ringShadow;
-    return root;
-  }
-
-  function createSaturnPlanetShadow(ringInnerRadius, ringOuterRadius) {
-    const geometry = createSaturnShadowSectorGeometry(
-      ringInnerRadius,
-      ringOuterRadius * 0.94,
-      -Math.PI * 0.18,
-      Math.PI * 0.36,
-      64
-    );
-    const material = new THREE.MeshBasicMaterial({
-      color: "#000000",
-      transparent: true,
-      opacity: 0.32,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const shadow = new THREE.Mesh(geometry, material);
-    shadow.position.y = 0.006;
-    shadow.renderOrder = 3;
-    return shadow;
-  }
-
-  function createAnnularGeometry(innerRadius, outerRadius, segments, thetaStart = 0, thetaLength = Math.PI * 2, withUVs = false) {
-    const positions = [];
-    const uvs = withUVs ? [] : null;
-    const indices = [];
-
-    for (let i = 0; i <= segments; i += 1) {
-      const angle = thetaStart + thetaLength * i / segments;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      positions.push(innerRadius * cos, 0, innerRadius * sin);
-      positions.push(outerRadius * cos, 0, outerRadius * sin);
-      if (withUVs) {
-        uvs.push(0, i / segments);
-        uvs.push(1, i / segments);
-      }
-    }
-
-    for (let i = 0; i < segments; i += 1) {
-      const innerA = i * 2;
-      const outerA = innerA + 1;
-      const innerB = innerA + 2;
-      const outerB = innerA + 3;
-      indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    if (withUVs) geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
-    return geometry;
-  }
-
-  function createSaturnRingGeometry(innerRadius, outerRadius, segments) {
-    return createAnnularGeometry(innerRadius, outerRadius, segments, 0, Math.PI * 2, true);
-  }
-
-  function createSaturnShadowSectorGeometry(innerRadius, outerRadius, thetaStart, thetaLength, segments) {
-    return createAnnularGeometry(innerRadius, outerRadius, segments, thetaStart, thetaLength, false);
-  }
-
-  function createSaturnRingShadow() {
-    const shadow = new THREE.Mesh(
-      new THREE.TorusGeometry(1.012, 0.028, 10, 160),
-      new THREE.MeshBasicMaterial({
-        color: "#000000",
-        transparent: true,
-        opacity: 0.16,
-        depthWrite: false
-      })
-    );
-    shadow.rotation.x = Math.PI / 2;
-    shadow.renderOrder = 4;
-    return shadow;
-  }
-
-  function applyBodyTexture(mesh, name, tex) {
-    const target = mesh.userData && mesh.userData.surface ? mesh.userData.surface : mesh;
-    const mat = target.material;
-    if (!mat) return;
-    if (name !== 'Moon') mat.color.set('#ffffff');
-    mat.map = tex;
-    mat.needsUpdate = true;
-  }
-
-  function applySaturnRingTexture(mesh, tex) {
-    const rings = mesh.userData && mesh.userData.rings;
-    if (!rings || !rings.material) return;
-    rings.material.map = tex;
-    rings.material.needsUpdate = true;
-  }
-
-  function createTrail(body) {
-    const capacity = TRAIL_INITIAL_CAPACITY;
-    const positions = new Float32Array(capacity * 3);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setDrawRange(0, 0);
-
-    const material = new THREE.LineBasicMaterial({
-      color: body.name === "Rocket" ? "#ffffff" : body.color,
-      transparent: true,
-      opacity: body.name === "Rocket" ? 0.95 : 0.35
-    });
-
-    const line = new THREE.Line(geometry, material);
-    line.frustumCulled = false;
-    line.visible = showTrailsInput.checked;
-    return { line, positions, capacity, count: 0, nextSampleTime: elapsedSeconds };
-  }
-
-  function resetTrail(trail) {
-    trail.count = 0;
-    trail.nextSampleTime = elapsedSeconds;
-    trail.line.geometry.setDrawRange(0, 0);
-    trail.line.geometry.attributes.position.needsUpdate = true;
   }
 
   function updateMeshes() {
@@ -1359,13 +1101,6 @@
     return dvx * ux + dvy * uy + dvz * uz;
   }
 
-  function formatDist(meters) {
-    if (meters < 1e6) return `${(meters / 1e3).toFixed(0)} km`;
-    if (meters < 1e9) return `${(meters / 1e6).toFixed(1)} Mm`;
-    if (meters < 1e12) return `${(meters / 1e9).toFixed(2)} Gm`;
-    return `${(meters / 1e12).toFixed(2)} Tm`;
-  }
-
   function getCurrentFlybyTargetName() {
     const targets = (activeScenario && activeScenario.flybyTargets) || [];
     if (!targets.length) return null;
@@ -1492,45 +1227,6 @@
       : `target ${missionStatus.targetInclinationDeg || "?"} deg`;
   }
 
-  function firstBurnText(mission) {
-    const first = (mission.program || []).find((burn) => (burn.throttle || 0) > 0);
-    return first ? `${first.name} at ${formatDuration(first.start)}` : "none";
-  }
-
-  function formatCommand(missionStatus) {
-    const name = missionStatus.commandName || "idle";
-    if (Number.isFinite(missionStatus.commandStart) && Number.isFinite(missionStatus.commandEnd)) {
-      return `${name} (${missionStatus.commandStart.toFixed(0)}-${missionStatus.commandEnd.toFixed(0)}s)`;
-    }
-    return name;
-  }
-
-  function formatDuration(seconds) {
-    if (!Number.isFinite(seconds)) {
-      return "n/a";
-    }
-    if (seconds < 120) {
-      return `${seconds.toFixed(0)}s`;
-    }
-    if (seconds < 3 * 3600) {
-      return `${(seconds / 60).toFixed(1)}m`;
-    }
-    return `${(seconds / 3600).toFixed(1)}h`;
-  }
-
-  function formatElapsedTime(totalSeconds) {
-    const s = Math.floor(totalSeconds % 60);
-    const m = Math.floor(totalSeconds / 60) % 60;
-    const h = Math.floor(totalSeconds / 3600) % 24;
-    const d = Math.floor(totalSeconds / 86400) % 365;
-    const y = Math.floor(totalSeconds / (365.25 * 86400));
-    if (y > 0) return `${y}y ${d}d ${h}h ${m}m ${s}s`;
-    if (d > 0) return `${d}d ${h}h ${m}m ${s}s`;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
-  }
-
   function syncReferenceOrbits() {
     referenceOrbitGroup.clear();
     for (const orbit of activeScenario.referenceOrbits || []) {
@@ -1559,7 +1255,6 @@
     referenceOrbitGroup.add(line);
   }
 
-  const _siteVec = new THREE.Vector3();
   function updateLaunchSiteMarkers() {
     const earth = bodies.find(b => b.name === 'Earth');
     if (!earth) {
@@ -1642,12 +1337,6 @@
     };
   }
 
-  function syncPelletScale() {
-    if (pelletSystem) {
-      pelletSystem.metersToUnits = getViewConfig().metersToUnits;
-    }
-  }
-
   function getBodyVisualRadius(body) {
     const view = getViewConfig();
     const displayScale = view.useDisplayScale ? body.displayScale : 1;
@@ -1683,4 +1372,3 @@
   function hasSelectOption(select, value) {
     return Array.from(select.options).some((option) => option.value === value);
   }
-})();

@@ -3,7 +3,7 @@
  * Run with:  npx jest soyuz-iss-diagnostic --no-coverage
  */
 
-const { loadSimulator, relativeSpeed } = require('./harness');
+import { loadSimulator, relativeSpeed } from './harness.js';
 
 const SCENARIO     = 'soyuz-iss-baikonur';
 const SITE         = 'baikonur';
@@ -64,12 +64,88 @@ function buildLine(tag, bodies, ms, sim) {
   );
 }
 
-test('mission trace — event-driven', () => {
+/**
+ * Compute launch window (seconds to wait) from ISS orbital plane and Baikonur position.
+ * Matches the algorithm in computeLaunchWindowSeconds() in app-classic.js,
+ * but uses the initial ISS body state instead of SGP4 (no satellite.js in tests).
+ * In the soyuz-iss-baikonur scenario the physics frame IS the inertial frame at t=0,
+ * so no GMST rotation is needed.
+ */
+function computeLaunchWindow(bodies, site) {
+  const iss = bodies.find(b => b.name === 'ISS');
+  if (!iss) return 0;
+
+  // Orbital angular momentum = r × v
+  const { x: rx, y: ry, z: rz } = iss.position;
+  const { x: vx, y: vy, z: vz } = iss.velocity;
+  const hx = ry*vz - rz*vy;
+  const hy = rz*vx - rx*vz;
+  const hz = rx*vy - ry*vx;
+  const hMag = Math.sqrt(hx*hx + hy*hy + hz*hz);
+  if (hMag === 0) return 0;
+  const nx = hx/hMag, ny = hy/hMag, nz = hz/hMag;
+
+  const omega    = 7.2921150e-5; // rad/s sidereal
+  const latRad   = site.latDeg * Math.PI / 180;
+  const lonRad   = site.lonDeg * Math.PI / 180; // gmst0=0 in physics frame
+  const T_sid    = 2 * Math.PI / omega;
+
+  const A = nx * Math.cos(latRad);
+  const B = ny * Math.cos(latRad);
+  const C = nz * Math.sin(latRad);
+  const R = Math.sqrt(A*A + B*B);
+  if (R < 1e-10) return 0;
+  const cosArg = -C / R;
+  if (Math.abs(cosArg) > 1) return 0;
+
+  const alpha = Math.acos(cosArg);
+  const phi   = Math.atan2(B, A);
+
+  function nextPositiveT(theta) {
+    const t = (theta - lonRad) / omega;
+    const n = ((t % T_sid) + T_sid) % T_sid;
+    return n < 60 ? n + T_sid : n;
+  }
+
+  const t1 = nextPositiveT(phi + alpha);
+  const t2 = nextPositiveT(phi - alpha);
+  return Math.min(t1, t2);
+}
+
+test('mission trace — immediate launch (earthRotationOffset=0)', () => {
   const sim    = loadSimulator();
   const bodies = sim.SolarPhysics.createInitialBodies(SCENARIO);
   const mission = sim.RocketSim.missionForScenario(SCENARIO, SITE, PROFILE);
-  const ms     = sim.RocketSim.createMissionState(mission, bodies);
+  const ms     = sim.RocketSim.createMissionState(mission, bodies, 0);
 
+  _runTrace(sim, bodies, ms, 'earthRotationOffset=0');
+});
+
+test('mission trace — with pre-launch Earth rotation wait', () => {
+  const sim    = loadSimulator();
+  const bodies = sim.SolarPhysics.createInitialBodies(SCENARIO);
+  const mission = sim.RocketSim.missionForScenario(SCENARIO, SITE, PROFILE);
+
+  const site = mission.launchSite;
+  const launchWindowSeconds = computeLaunchWindow(bodies, site);
+  console.log(`\nComputed launch window: ${launchWindowSeconds.toFixed(0)} s ` +
+    `(${(launchWindowSeconds/3600).toFixed(2)} h)`);
+
+  // Advance physics for launchWindowSeconds before creating the rocket
+  const PRE_STEP = 100;
+  let preLaunchTime = 0;
+  while (preLaunchTime < launchWindowSeconds) {
+    const dt = Math.min(PRE_STEP, launchWindowSeconds - preLaunchTime);
+    sim.SolarPhysics.stepSimulation(bodies, dt);
+    preLaunchTime += dt;
+  }
+
+  const ms = sim.RocketSim.createMissionState(mission, bodies, launchWindowSeconds);
+  _runTrace(sim, bodies, ms,
+    `earthRotationOffset=${launchWindowSeconds.toFixed(0)}s`);
+});
+
+function _runTrace(sim, bodies, ms, label) {
   const earth  = bodies.find(b => b.name === 'Earth');
   const rocket = bodies.find(b => b.name === 'Rocket');
 
@@ -78,7 +154,7 @@ test('mission trace — event-driven', () => {
   let lastHeartbeat = 0;
 
   const lines = [];
-  lines.push('Soyuz→ISS  E=engine on  v_rad>0=climbing  v_rad<0=falling  v/circ≈1=circular');
+  lines.push(`\nSoyuz→ISS [${label}]  E=engine on  v_rad>0=climbing  v_rad<0=falling  v/circ≈1=circular`);
   lines.push(HDR);
   lines.push('─'.repeat(HDR.length));
   lines.push(buildLine('init', bodies, ms, sim));
@@ -89,7 +165,6 @@ test('mission trace — event-driven', () => {
       sim.RocketSim.chooseStepSeconds(ms, bodies, STEP_REQUEST),
       remaining
     );
-    //console.log(`dt: ${dt}`)
 
     sim.RocketSim.updateRocketBeforePhysics(ms, bodies, dt, null);
     sim.SolarPhysics.stepSimulation(bodies, dt);
@@ -130,6 +205,6 @@ test('mission trace — event-driven', () => {
     lines.push(buildLine('end of program', bodies, ms, sim));
   }
 
-  console.log('\n' + lines.join('\n'));
+  console.log(lines.join('\n'));
   expect(true).toBe(true);
-});
+}

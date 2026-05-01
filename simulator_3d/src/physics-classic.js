@@ -1,15 +1,11 @@
-(function () {
-  const G = 6.67408e-11;
-  const DAY = 24 * 60 * 60;
-  const YEAR = 365.25 * DAY;
-  const SOFTENING = 1.0e5;
-  const KM_TO_M = 1000;
+import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance, len } from './vec3.js';
+import { G, DAY, YEAR } from './constants.js';
+import { SolarScenarioData } from './scenario-data.js';
 
-  const scenarioData = window.SolarScenarioData || {
-    bodyCatalog: {},
-    defaultScenarioId: "jupiter-gravity-assist-handcrafted",
-    scenarios: []
-  };
+const SOFTENING = 1.0e5;
+const KM_TO_M = 1000;
+
+const scenarioData = SolarScenarioData;
 
   class Body {
     constructor({
@@ -42,10 +38,6 @@
       this.rings = rings;
       this.isSatellite = isSatellite;
     }
-  }
-
-  function sqr(value) {
-    return value * value;
   }
 
   function circularBody({ name, color, mass, radius, orbitRadius, speed, phase, inclination = 0, displayScale = 1 }) {
@@ -273,12 +265,8 @@
     }
   }
 
-  function distance(a, b) {
-    return Math.sqrt(sqr(a.x - b.x) + sqr(a.y - b.y) + sqr(a.z - b.z));
-  }
-
   function speed(body) {
-    return Math.sqrt(sqr(body.velocity.x) + sqr(body.velocity.y) + sqr(body.velocity.z));
+    return len(body.velocity);
   }
 
   function computeAccelerations(bodies) {
@@ -333,34 +321,6 @@
     }
   }
 
-  function add(a, b) {
-    return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
-  }
-
-  function subtract(a, b) {
-    return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-  }
-
-  function multiply(v, value) {
-    return { x: v.x * value, y: v.y * value, z: v.z * value };
-  }
-
-  function normalize(v) {
-    const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (length === 0) {
-      return { x: 0, y: 0, z: 0 };
-    }
-    return { x: v.x / length, y: v.y / length, z: v.z / length };
-  }
-
-  function normalizeOrFallback(v, fallback) {
-    const normalized = normalize(v);
-    if (normalized.x === 0 && normalized.y === 0 && normalized.z === 0) {
-      return fallback;
-    }
-    return normalized;
-  }
-
   function vectorFromArray(values, scale) {
     return {
       x: values[0] * scale,
@@ -373,17 +333,9 @@
     return value * Math.PI / 180;
   }
 
-  function cross(a, b) {
-    return {
-      x: a.y * b.z - a.z * b.y,
-      y: a.z * b.x - a.x * b.z,
-      z: a.x * b.y - a.y * b.x
-    };
-  }
-
   // LDEM height lookup: returns terrain height in meters above mean Moon radius
   function ldemHeightAt(latRad, lonRad) {
-    const imageData = window._ldemImageData;
+    const imageData = _ldemImageData;
     if (!imageData) return 0;
     const w = imageData.width;
     const h = imageData.height;
@@ -437,25 +389,24 @@
 
         const threshold = body.name === 'Moon' ? 5 : 10;
         const success = impactSpeed <= threshold;
-        if (typeof window !== 'undefined' && window.showLandingResult) {
-          window.showLandingResult(success, impactSpeed, body.name);
-        }
         if (onLanding) onLanding(success, impactSpeed, body.name);
         return;
       }
     }
   }
 
-  window.SolarPhysics = {
-    constants: { G, DAY, YEAR },
-    checkLandings,
-    createInitialBodies,
-    distance,
-    getScenario,
-    getScenarios,
-    launchRocket,
-    ldemHeightAt,
-    speed,
-    stepSimulation
-  };
-})();
+let _ldemImageData = null;
+export function setLdemImageData(imageData) { _ldemImageData = imageData; }
+
+export const SolarPhysics = {
+  constants: { G, DAY, YEAR },
+  checkLandings,
+  createInitialBodies,
+  distance,
+  getScenario,
+  getScenarios,
+  launchRocket,
+  ldemHeightAt,
+  speed,
+  stepSimulation
+};

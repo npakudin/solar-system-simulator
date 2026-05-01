@@ -2,9 +2,10 @@
   "name": "planets3d-simulator",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "test": "jest --no-coverage",
-    "test:verbose": "jest --no-coverage --verbose"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage",
+    "test:verbose": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage --verbose"
   },
   "devDependencies": {
     "jest": "^29.7.0"

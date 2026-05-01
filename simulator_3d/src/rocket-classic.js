@@ -1,8 +1,9 @@
-(function () {
-  const MISSIONS = window.Missions || {};
-  const LAUNCH_CONFIG = window.RocketLaunchConfig || null;
-  const TWO_PI = Math.PI * 2;
-  const DEG_TO_RAD = Math.PI / 180;
+import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance } from './vec3.js';
+import { TWO_PI, DEG2RAD as DEG_TO_RAD } from './constants.js';
+import { attitudeDirection } from './attitude.js';
+import { RocketLaunchConfig as LAUNCH_CONFIG } from './scenario-data.js';
+
+const MISSIONS = {};
 
   function missionForScenario(scenarioId, launchSiteId, targetProfileId) {
     if (LAUNCH_CONFIG) {
@@ -84,60 +85,11 @@
       earthRotationOffsetSeconds,
       missionTime: 0,
       attachedToPad: true,
-      pelletAccumulator: 0,
       lastCommand: commandAt(mission, 0)
     };
   }
 
-  function createPelletSystem(THREE, maxPellets, metersToUnits) {
-    const max = maxPellets || 2000;
-    const positions = new Float32Array(max * 3);
-    const worldPositions = new Float64Array(max * 3);
-    const velocities = new Float64Array(max * 3);
-    const ttl = new Float32Array(max);
-    const alive = new Uint8Array(max);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-    const points = new THREE.Points(
-      geometry,
-      new THREE.PointsMaterial({
-        color: "#ffb45b",
-        size: 0.28,
-        sizeAttenuation: true,
-        transparent: true,
-        opacity: 0.85
-      })
-    );
-
-    return {
-      max,
-      next: 0,
-      positions,
-      worldPositions,
-      velocities,
-      ttl,
-      alive,
-      points,
-      metersToUnits
-    };
-  }
-
-  function resetPelletSystem(system) {
-    if (!system) {
-      return;
-    }
-
-    system.next = 0;
-    system.alive.fill(0);
-    system.ttl.fill(0);
-    system.positions.fill(0);
-    system.worldPositions.fill(0);
-    system.velocities.fill(0);
-    system.points.geometry.attributes.position.needsUpdate = true;
-  }
-
-  function updateRocketBeforePhysics(state, bodies, dt, pelletSystem) {
+  function updateRocketBeforePhysics(state, bodies, dt) {
     if (!state) {
       return;
     }
@@ -165,15 +117,14 @@
     }
 
     if (rocket.engineOn) {
-      burnFuel(state, rocket, attitude, throttle, dt, pelletSystem);
+      burnFuel(state, rocket, attitude, throttle, dt);
     }
 
     state.lastCommand = command;
   }
 
-  function updateRocketAfterPhysics(state, bodies, dt, pelletSystem) {
+  function updateRocketAfterPhysics(state, bodies, dt) {
     if (!state) {
-      updatePellets(pelletSystem, bodies, dt);
       return;
     }
 
@@ -183,7 +134,6 @@
     }
 
     state.missionTime += dt;
-    updatePellets(pelletSystem, bodies, dt);
   }
 
   function chooseStepSeconds(state, bodies, requestedDt) {
@@ -373,7 +323,7 @@
     };
   }
 
-  function burnFuel(state, rocket, attitude, throttle, dt, pelletSystem) {
+  function burnFuel(state, rocket, attitude, throttle, dt) {
     const vehicle = state.mission.vehicle;
     const desiredMassFlow = throttle * vehicle.maxMassFlowKgPerSec;
     const maxMassFlow = rocket.fuelMass / dt;
@@ -392,200 +342,6 @@
     rocket.velocity.z += attitude.z * thrustAcceleration * dt;
     rocket.fuelMass -= spentFuel;
     rocket.mass = rocket.dryMass + rocket.fuelMass;
-
-    spawnPellets(state, rocket, attitude, dt, pelletSystem);
-  }
-
-  function spawnPellets(state, rocket, attitude, dt, pelletSystem) {
-    if (!pelletSystem) {
-      return;
-    }
-
-    const vehicle = state.mission.vehicle;
-    const visualRate = vehicle.visualPelletsPerSecond || 0;
-    if (visualRate <= 0) {
-      return;
-    }
-
-    state.pelletAccumulator += visualRate * dt;
-    const count = Math.min(80, Math.floor(state.pelletAccumulator));
-    state.pelletAccumulator -= count;
-
-    const ttl = vehicle.visualPelletTtlSeconds || 60;
-    const speed = vehicle.exhaustVelocityMps * (vehicle.visualPelletSpeedScale || 0.04);
-    const cone = (vehicle.visualPelletConeDeg || 8) * DEG_TO_RAD;
-
-    for (let i = 0; i < count; i += 1) {
-      const exhaustDirection = randomConeDirection(multiply(attitude, -1), cone);
-      const velocity = add(rocket.velocity, multiply(exhaustDirection, speed));
-      addPellet(pelletSystem, rocket.position, velocity, ttl);
-    }
-  }
-
-  function updatePellets(system, bodies, dt) {
-    if (!system) {
-      return;
-    }
-
-    const earth = findBody(bodies, "Earth");
-
-    for (let i = 0; i < system.max; i += 1) {
-      if (!system.alive[i]) {
-        continue;
-      }
-
-      const base = i * 3;
-      system.ttl[i] -= dt;
-      if (system.ttl[i] <= 0) {
-        killPellet(system, i);
-        continue;
-      }
-
-      if (earth) {
-        const dx = earth.position.x - system.worldPositions[base];
-        const dy = earth.position.y - system.worldPositions[base + 1];
-        const dz = earth.position.z - system.worldPositions[base + 2];
-        const dist2 = dx * dx + dy * dy + dz * dz;
-        const dist = Math.sqrt(dist2);
-
-        if (dist <= earth.radius) {
-          killPellet(system, i);
-          continue;
-        }
-
-        const gravity = 6.67408e-11 * earth.mass / dist2;
-        system.velocities[base] += dx / dist * gravity * dt;
-        system.velocities[base + 1] += dy / dist * gravity * dt;
-        system.velocities[base + 2] += dz / dist * gravity * dt;
-      }
-
-      system.worldPositions[base] += system.velocities[base] * dt;
-      system.worldPositions[base + 1] += system.velocities[base + 1] * dt;
-      system.worldPositions[base + 2] += system.velocities[base + 2] * dt;
-      writeRenderPosition(system, i);
-    }
-
-    system.points.geometry.attributes.position.needsUpdate = true;
-  }
-
-  function addPellet(system, position, velocity, ttl) {
-    const index = system.next;
-    const base = index * 3;
-
-    system.alive[index] = 1;
-    system.ttl[index] = ttl;
-    system.worldPositions[base] = position.x;
-    system.worldPositions[base + 1] = position.y;
-    system.worldPositions[base + 2] = position.z;
-    system.velocities[base] = velocity.x;
-    system.velocities[base + 1] = velocity.y;
-    system.velocities[base + 2] = velocity.z;
-    writeRenderPosition(system, index);
-
-    system.next = (system.next + 1) % system.max;
-  }
-
-  function killPellet(system, index) {
-    const base = index * 3;
-    system.alive[index] = 0;
-    system.ttl[index] = 0;
-    system.positions[base] = 0;
-    system.positions[base + 1] = 0;
-    system.positions[base + 2] = 0;
-  }
-
-  function writeRenderPosition(system, index) {
-    const base = index * 3;
-    system.positions[base] = system.worldPositions[base] * system.metersToUnits;
-    system.positions[base + 1] = system.worldPositions[base + 2] * system.metersToUnits;
-    system.positions[base + 2] = system.worldPositions[base + 1] * system.metersToUnits;
-  }
-
-  function attitudeDirection(state, bodies, command) {
-    const earth = findBody(bodies, "Earth");
-    const rocket = state.rocket;
-    if (!earth || !rocket) {
-      return { x: 1, y: 0, z: 0 };
-    }
-
-    const up = normalize(subtract(rocket.position, earth.position));
-    const attitude = command.attitude || { mode: "surface-up" };
-
-    if (attitude.mode === "prograde") {
-      return normalizeOrFallback(subtract(rocket.velocity, earth.velocity), up);
-    }
-
-    if (attitude.mode === "retrograde") {
-      return normalizeOrFallback(multiply(subtract(rocket.velocity, earth.velocity), -1), up);
-    }
-
-    if (attitude.mode === "target-body") {
-      const target = findBody(bodies, attitude.target);
-      if (target) {
-        const leadSeconds = attitude.leadSeconds || 0;
-        const targetPosition = add(target.position, multiply(target.velocity, leadSeconds));
-        return normalizeOrFallback(subtract(targetPosition, rocket.position), up);
-      }
-    }
-
-    if (attitude.mode === "pitch-program") {
-      const spinAxis = (state.mission.earth && state.mission.earth.northPole) || { x: 0, y: 0, z: 1 };
-      return pitchDirection(up, attitude.headingDeg || 90, pitchAt(attitude, state.missionTime), spinAxis);
-    }
-
-    if (attitude.mode === "rtn") {
-      // RTN (LVLH): R=radial-out, T=tangential(prograde), N=normal(out of plane)
-      const relVel = subtract(rocket.velocity, earth.velocity);
-      const T = normalizeOrFallback(relVel, { x: 0, y: 1, z: 0 });
-      const N = normalizeOrFallback(cross(up, T), { x: 0, y: 0, z: 1 });
-      const r = attitude.r || 0;
-      const t = attitude.t || 0;
-      const n = attitude.n || 0;
-      return normalizeOrFallback(
-        add(add(multiply(up, r), multiply(T, t)), multiply(N, n)),
-        up
-      );
-    }
-
-    return up;
-  }
-
-  function pitchAt(attitude, missionTime) {
-    const points = attitude.points || [];
-    if (points.length === 0) {
-      return attitude.pitchDeg || 90;
-    }
-
-    if (missionTime <= points[0].t) {
-      return points[0].pitchDeg;
-    }
-
-    for (let i = 0; i < points.length - 1; i += 1) {
-      const a = points[i];
-      const b = points[i + 1];
-      if (missionTime >= a.t && missionTime <= b.t) {
-        const mix = (missionTime - a.t) / (b.t - a.t);
-        return a.pitchDeg + (b.pitchDeg - a.pitchDeg) * mix;
-      }
-    }
-
-    return points[points.length - 1].pitchDeg;
-  }
-
-  function pitchDirection(up, headingDeg, pitchDeg, spinAxis) {
-    spinAxis = spinAxis || { x: 0, y: 0, z: 1 };
-    const east = normalizeOrFallback(cross(spinAxis, up), { x: 0, y: 1, z: 0 });
-    const north = normalizeOrFallback(cross(up, east), { x: 0, y: 0, z: 1 });
-    const heading = headingDeg * DEG_TO_RAD;
-    const horizontal = normalize(add(
-      multiply(north, Math.cos(heading)),
-      multiply(east, Math.sin(heading))
-    ));
-    const pitch = pitchDeg * DEG_TO_RAD;
-    return normalize(add(
-      multiply(up, Math.sin(pitch)),
-      multiply(horizontal, Math.cos(pitch))
-    ));
   }
 
   function lockRocketToPad(state, earth) {
@@ -774,84 +530,21 @@
     return bodies.find((body) => body.name === name);
   }
 
-  function add(a, b) {
-    return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
-  }
-
-  function subtract(a, b) {
-    return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-  }
-
-  function multiply(v, value) {
-    return { x: v.x * value, y: v.y * value, z: v.z * value };
-  }
-
-  function distance(a, b) {
-    return Math.sqrt(
-      (a.x - b.x) * (a.x - b.x) +
-      (a.y - b.y) * (a.y - b.y) +
-      (a.z - b.z) * (a.z - b.z)
-    );
-  }
-
-  function normalize(v) {
-    const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (length === 0) {
-      return { x: 0, y: 0, z: 0 };
-    }
-    return { x: v.x / length, y: v.y / length, z: v.z / length };
-  }
-
-  function normalizeOrFallback(v, fallback) {
-    const normalized = normalize(v);
-    if (normalized.x === 0 && normalized.y === 0 && normalized.z === 0) {
-      return fallback;
-    }
-    return normalized;
-  }
-
-  function cross(a, b) {
-    return {
-      x: a.y * b.z - a.z * b.y,
-      y: a.z * b.x - a.x * b.z,
-      z: a.x * b.y - a.y * b.x
-    };
-  }
-
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
 
-  function randomConeDirection(axis, coneRadians) {
-    const w = normalize(axis);
-    const helper = Math.abs(w.z) < 0.9 ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
-    const u = normalize(cross(helper, w));
-    const v = cross(w, u);
-    const theta = Math.random() * TWO_PI;
-    const radius = Math.tan(coneRadians) * Math.sqrt(Math.random());
-    return normalize(add(
-      w,
-      add(
-        multiply(u, Math.cos(theta) * radius),
-        multiply(v, Math.sin(theta) * radius)
-      )
-    ));
-  }
-
-  window.RocketSim = {
-    missionForScenario,
-    launchSites,
-    targetProfilesForScenario,
-    defaultLaunchSiteId,
-    defaultLaunchSiteIdForScenario,
-    defaultTargetProfileId,
-    earthEllipsoid,
-    createMissionState,
-    createPelletSystem,
-    resetPelletSystem,
-    updateRocketBeforePhysics,
-    updateRocketAfterPhysics,
-    chooseStepSeconds,
-    missionStatus
-  };
-})();
+export const RocketSim = {
+  missionForScenario,
+  launchSites,
+  targetProfilesForScenario,
+  defaultLaunchSiteId,
+  defaultLaunchSiteIdForScenario,
+  defaultTargetProfileId,
+  earthEllipsoid,
+  createMissionState,
+  updateRocketBeforePhysics,
+  updateRocketAfterPhysics,
+  chooseStepSeconds,
+  missionStatus
+};

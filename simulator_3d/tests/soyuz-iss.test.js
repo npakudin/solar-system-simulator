@@ -1,4 +1,4 @@
-const { setupMission, runTo } = require('./harness');
+import { setupMission, runTo } from './harness.js';
 
 const SCENARIO = 'soyuz-iss-baikonur';
 const SITE     = 'baikonur';

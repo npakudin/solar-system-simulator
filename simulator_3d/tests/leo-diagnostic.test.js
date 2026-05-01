@@ -3,7 +3,7 @@
  * Shows what trajectory baseVehicle achieves with the standard gravity-turn timing.
  */
 
-const { setupMission, runTo, relativeSpeed } = require('./harness');
+import { setupMission, runTo, relativeSpeed } from './harness.js';
 
 const GM = 6.67408e-11 * 5.972e24;
 
