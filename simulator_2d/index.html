@@ -1,0 +1,269 @@
+<!doctype html>
+<html class="no-js" lang="">
+<head><title>Solar system</title>
+<style>
+  html {
+    height: 100%;
+  }
+  body {
+    width: 99%;
+    height: 97%;
+  }
+  #control_panel {
+    margin-right: 5px;
+    float: left;
+    width: 20%;
+  }
+  canvas {
+    display:block;
+    background-color: #f1f1f1;
+  }
+</style>
+<script>
+
+// BEGIN LOGIC
+function Planet(name, style, m, r, x, y, vx, vy) {
+  this.name = name;
+  this.style = style;
+  this.m = m;
+  this.r = r;
+  this.x = x;
+  this.y = y;
+  this.vx = vx;
+  this.vy = vy;
+  this.ax = 0;
+  this.ay = 0;
+}
+
+function sqr(num) {
+  return num*num;
+}
+
+// rotate the planet on the orbit
+function rotatePlanet(planet, angle) {
+  let r = Math.sqrt(sqr(planet.x) + sqr(planet.y));
+  let v = Math.sqrt(sqr(planet.vx) + sqr(planet.vy));
+
+  planet.x = -r * Math.sin(angle);
+  planet.y = r * Math.cos(angle);
+
+  planet.vx = v * Math.cos(angle);
+  planet.vy = v * Math.sin(angle);
+}
+
+// change coordinate system to the mass center
+function stopMassCenter() {
+  let px = 0;
+  let py = 0;
+  let totalMass = 0;
+  for (let i = 0; i < planets.length; i++) {
+    totalMass += planets[i].m;
+    px += planets[i].vx * planets[i].m;
+    py += planets[i].vy * planets[i].m;
+  }
+  for (let i = 0; i < planets.length; i++) {
+    planets[i].vx -= px / totalMass;
+    planets[i].vy -= py / totalMass;
+  }
+}
+
+// Solar system
+const metersPerPixel = 5.0E+9; // space scale
+const hiddenStepsPerSec = 100000; // time scale
+let planets = [
+  new Planet("Sun"            , "orange", m=1.989E+30 , r=6.9634E+8*0.3, x=0  , y=0                   , vx=0              , vy=0), // note: Sun_r is *0.3 to see Earth
+  new Planet("Earth"          , "red"   , m=5.972E+24 , r=6.371E+6*10  , x=0  , y=1.496E+11           , vx=2.978E+4       , vy=0), // note: Earth_r is *10 to see it
+  new Planet("Jupiter"        , "blue"  , m=1.8986E+27, r=6.9911E+7    , x=0.1, y=7.7857E+11          , vx=1.307E+4       , vy=0),
+  new Planet("Sat grav maneur", "black" , m=1.0E+3    , r=4.0E+7       , x=0.1, y=1.496E+11 + 6.371E+6, vx=2.978E+4+1.5E+4, vy=0),
+];
+rotatePlanet(planets[2], -0.92); // rotate Jupiter to the point to make gravitational maneuver
+
+// Earth system
+// const metersPerPixel = 1.0E+5; // space scale
+// const hiddenStepsPerSec = 20; // time scale
+// let planets = [
+//   new Planet("Earth"        , "cyan"    , m=5.972E+24, r=6.371E+6 , x=0   , y=0            , vx=0       , vy=0),
+//   new Planet("Moon"         , "magenta" , m=7.36E+22 , r=1.7371E+6, x=0   , y=3.844E+8     , vx=1.023E+3, vy=0),
+//   new Planet("Sat 1st space", "black"   , m=1.0E+3   , r=1.0E+5   , x=0   , y=6.371E+6*1.01, vx=7.91E+3 , vy=0),
+//   new Planet("Sat 2nd space", "red"     , m=1.0E+3   , r=1.0E+5   , x=0.1 , y=6.371E+6*1.01, vx=1.12E+4 , vy=0),
+// ];
+
+stopMassCenter();
+
+const G = 6.67408E-11;
+let time = 0;
+let dt = 3.0E+1;
+let minDist;
+function newPos() {
+
+  // calculate acceleration for each planet
+  // also find the minimal distance between planets
+  for (let i=0; i<planets.length; i++) {
+    planets[i].ax = 0;
+    planets[i].ay = 0;
+  }
+  minDist = Number.MAX_VALUE;
+  for (let i=0; i<planets.length; i++) {
+    for (let j=i+1; j<planets.length; j++) {
+      let dist2 = (sqr(planets[j].x - planets[i].x) + sqr(planets[j].y - planets[i].y));
+      let dist32 = dist2 * Math.sqrt(dist2); // dist^(3/2)
+      //let f = G * planets[i].m * planets[j].m / dist2;
+
+      planets[i].ax += G * planets[j].m * (planets[j].x - planets[i].x) / dist32;
+      planets[j].ax -= G * planets[i].m * (planets[j].x - planets[i].x) / dist32;
+
+      planets[i].ay += G * planets[j].m * (planets[j].y - planets[i].y) / dist32;
+      planets[j].ay -= G * planets[i].m * (planets[j].y - planets[i].y) / dist32;
+
+      if (minDist > Math.sqrt(dist2)) {
+        minDist = Math.sqrt(dist2);
+      }
+    }
+  }
+
+  // update velocity, coordinates and time
+  dt = 1.0E-9 * minDist;
+  for (let i=0; i<planets.length; i++) {
+    planets[i].x  += planets[i].vx * dt + planets[i].ax * sqr(dt) / 2;
+    planets[i].vx += planets[i].ax * dt;
+
+    planets[i].y  += planets[i].vy * dt + planets[i].ay * sqr(dt) / 2;
+    planets[i].vy += planets[i].ay * dt;
+  }
+
+  time += dt;
+}
+// END LOGIC
+
+
+// BEGIN DRAWING
+let canvas;
+let context;
+let transX;
+let transY;
+
+function init() {
+
+  canvas = document.getElementById("canvas");
+  let controlPanel = document.getElementById("control_panel");
+  canvas.width = window.innerWidth - controlPanel.clientWidth - 20;
+  canvas.height = window.innerHeight - 25;
+
+  context = canvas.getContext("2d");
+  transX = canvas.width * 0.5;
+  transY = canvas.height * 0.5;
+  context.translate(transX, transY);
+
+  draw();
+  drawLegend();
+}
+
+function clearScreen() {
+  context.clearRect(-transX, -transY, 2*transX, 2*transY);
+}
+
+function drawPlanet(x, y, r, style) {
+  context.fillStyle = style;
+  context.beginPath();
+  let planetsScale = isCirclesMode ? 300 : 100; // increase size of planets to see them
+  context.arc(x, y, r, 0, 2 * Math.PI);
+  context.closePath();
+  context.fill();
+}
+
+let isCirclesMode = false;
+function draw() {
+  // clear screen and draw legend
+  if (isCirclesMode) {
+    clearScreen();
+    drawLegend();
+  }
+
+  // draw new position
+  for (let i=0; i<planets.length; i++) {
+    let planetsScale = isCirclesMode ? 300 : 100; // increase size of planets (natural size is too small)
+    drawPlanet(planets[i].x / metersPerPixel, planets[i].y / metersPerPixel, planets[i].r / metersPerPixel * planetsScale, planets[i].style);
+  }
+
+
+  // draw text
+  document.getElementById("time_sec").innerText = "Time, sec: " + time.toExponential(2);
+  document.getElementById("time_years").innerText = "Time, years: " + (time/(3600*24*365.25)).toExponential(2);
+  document.getElementById("dt").innerText = "dt, sec: " + dt.toExponential(2);
+
+  let satVelocity = Math.sqrt(sqr(planets[3].vx) + sqr(planets[3].vy));
+  document.getElementById("sat_velocity").innerText = "Sat velocity, km/s: " + (satVelocity/1000).toExponential(2);
+}
+
+function drawLegend() {
+  for (let i=0; i<planets.length; i++) {
+    const legendItemHeight = 20;
+    let planetsScale = isCirclesMode ? 300 : 100; // increase size of planets to see them
+    drawPlanet(legendItemHeight - transX, (i+1)*legendItemHeight - transY, planets[i].r / metersPerPixel * planetsScale, planets[i].style);
+
+    var str = planets[i].name;
+    context.font = "15px Arial";
+    context.fillText(str, legendItemHeight - transX + legendItemHeight, (i+1)*legendItemHeight - transY + legendItemHeight / 4);
+  }
+}
+// END DRAWING
+
+
+// BEGIN CONTROL
+let isRun = false;
+function updateGameArea() {
+  if (!isRun) {
+    return;
+  }
+
+  draw();
+  for (let i = 0; i < hiddenStepsPerSec / dt; i++) {
+    newPos();
+  }
+
+  // make infinite loop without freezing
+  setTimeout(updateGameArea, 0);
+}
+
+function start() {
+  isRun = !isRun;
+  document.getElementById("button_start").innerText = (isRun ? "Stop" : "Start");
+  if (isRun) {
+    updateGameArea();
+  }
+}
+
+function stop() {
+  isRun = false;
+}
+
+function changeMode(checkbox) {
+  isCirclesMode = document.getElementById("circles").checked;
+  clearScreen();
+  drawLegend();
+  draw();
+}
+// END CONTROL
+
+</script>
+</head>
+<body onload="init()">
+  <div id="control_panel">
+    <span>Solar system simulator</span><br />
+    <span>Gravitational maneuver</span><br /><br />
+
+    <input type="radio" id="orbits" name="mode" value="orbits" onchange="changeMode(this);" checked><label for="orbits">Orbits mode</label><br />
+    <input type="radio" id="circles" name="mode" value="circles" onchange="changeMode(this);"><label for="circles">Circles mode</label><br />
+
+    <button id="button_start" onclick="start();">Start</button><br />
+    <br />
+
+    <span id="time_sec">Time, sec: 0.00e+0</span><br />
+    <span id="time_years">Time, years: 0.00e+0</span><br />
+    <span id="dt">dt, sec: 0.00e+0</span><br />
+    <span id="sat_velocity">Sat velocity, km/s: 0.00e+0</span><br />
+  </div>
+
+  <canvas id="canvas"></canvas>
+</body>
+</html>
