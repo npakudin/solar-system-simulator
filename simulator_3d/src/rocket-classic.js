@@ -28,6 +28,15 @@
     return LAUNCH_CONFIG ? LAUNCH_CONFIG.defaultLaunchSiteId : "";
   }
 
+  function defaultLaunchSiteIdForScenario(scenarioId, profileId) {
+    if (!LAUNCH_CONFIG) return "";
+    const profiles = LAUNCH_CONFIG.targetProfiles.filter((p) => p.scenarioIds.includes(scenarioId));
+    const profile = profileId
+      ? profiles.find((p) => p.id === profileId) || profiles[0]
+      : profiles[0];
+    return (profile && profile.defaultLaunchSiteId) || LAUNCH_CONFIG.defaultLaunchSiteId || "";
+  }
+
   function defaultTargetProfileId(scenarioId) {
     if (!LAUNCH_CONFIG) {
       return "";
@@ -214,7 +223,77 @@
       }
     }
 
+    dt = Math.min(dt, chooseProximityStepSeconds(mission, bodies, rocket, timestep, dt));
+
     return Math.max(0.05, dt);
+  }
+
+  function chooseProximityStepSeconds(mission, bodies, rocket, timestep, currentDt) {
+    if (!rocket) {
+      return currentDt;
+    }
+
+    let dt = currentDt;
+    const closeBodySeconds = timestep.closeBodySeconds || timestep.orbitSeconds || 10;
+    const flybySeconds = timestep.flybySeconds || timestep.farSeconds || 60;
+    const targetNames = missionTargetBodyNames(mission);
+
+    for (const body of bodies || []) {
+      if (!body || body === rocket || body.name === "Rocket" || body.name === "Sun") {
+        continue;
+      }
+
+      const separation = distance(rocket.position, body.position);
+      const closeRadius = body.radius * closeBodyRadiusMultiplier(body, targetNames);
+      if (separation < closeRadius) {
+        dt = Math.min(dt, closeBodySeconds);
+        continue;
+      }
+
+      if (isMeaningfulFlybyBody(body, targetNames) && separation < body.radius * 80) {
+        dt = Math.min(dt, flybySeconds);
+      }
+    }
+
+    return dt;
+  }
+
+  function missionTargetBodyNames(mission) {
+    const names = new Set();
+    const targetName = mission.targetOrbit && mission.targetOrbit.name;
+    if (targetName) {
+      for (const name of ["Moon", "Jupiter", "Saturn", "Uranus", "Neptune", "Mars", "Venus", "ISS"]) {
+        if (targetName.toLowerCase().includes(name.toLowerCase())) {
+          names.add(name);
+        }
+      }
+    }
+
+    for (const burn of mission.program || []) {
+      const target = burn.attitude && burn.attitude.target;
+      if (target) {
+        names.add(target);
+      }
+    }
+
+    return names;
+  }
+
+  function closeBodyRadiusMultiplier(body, targetNames) {
+    if (targetNames.has(body.name)) {
+      return body.name === "Jupiter" ? 60 : 25;
+    }
+    if (body.name === "Moon") {
+      return 18;
+    }
+    if (body.name === "Jupiter") {
+      return 50;
+    }
+    return 8;
+  }
+
+  function isMeaningfulFlybyBody(body, targetNames) {
+    return targetNames.has(body.name) || body.name === "Moon" || body.name === "Jupiter";
   }
 
   function secondsToNextEvent(mission, missionTime) {
@@ -433,7 +512,8 @@
     }
 
     if (attitude.mode === "pitch-program") {
-      return pitchDirection(up, attitude.headingDeg || 90, pitchAt(attitude, state.missionTime));
+      const spinAxis = (state.mission.earth && state.mission.earth.northPole) || { x: 0, y: 0, z: 1 };
+      return pitchDirection(up, attitude.headingDeg || 90, pitchAt(attitude, state.missionTime), spinAxis);
     }
 
     return up;
@@ -461,8 +541,8 @@
     return points[points.length - 1].pitchDeg;
   }
 
-  function pitchDirection(up, headingDeg, pitchDeg) {
-    const spinAxis = { x: 0, y: 0, z: 1 };
+  function pitchDirection(up, headingDeg, pitchDeg, spinAxis) {
+    spinAxis = spinAxis || { x: 0, y: 0, z: 1 };
     const east = normalizeOrFallback(cross(spinAxis, up), { x: 0, y: 1, z: 0 });
     const north = normalizeOrFallback(cross(up, east), { x: 0, y: 0, z: 1 });
     const heading = headingDeg * DEG_TO_RAD;
@@ -502,6 +582,13 @@
     const lon = site.lonDeg * DEG_TO_RAD + rotation;
     const height = site.altitudeM || 0;
     const ellipsoid = mission.earth && mission.earth.ellipsoid;
+    const northPole = mission.earth && mission.earth.northPole;
+
+    if (northPole) {
+      return siteSurfaceVectorGeneral(northPole, lat, lon, height, ellipsoid);
+    }
+
+    // Fast path for toy scenarios where Z is the north pole
     const cosLat = Math.cos(lat);
     const up = normalize({
       x: cosLat * Math.cos(lon),
@@ -510,10 +597,7 @@
     });
 
     if (!ellipsoid) {
-      return {
-        up,
-        position: multiply(up, 6371000 + height)
-      };
+      return { up, position: multiply(up, 6371000 + height) };
     }
 
     const a = ellipsoid.equatorialRadiusM;
@@ -532,8 +616,49 @@
     };
   }
 
+  function siteSurfaceVectorGeneral(pole, lat, lon, height, ellipsoid) {
+    // Build an equatorial basis in the plane perpendicular to pole.
+    // eq1 points toward lon=0 in the equatorial plane; eq2 = cross(pole, eq1).
+    // Gram-Schmidt: project a reference vector onto the equatorial plane.
+    const helper = (Math.abs(pole.x) > 0.9) ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
+    // eq1 = normalize(helper - (helper·pole)*pole) via cross-cross identity: cross(cross(pole,helper),pole)
+    const eq1 = normalize(cross(cross(pole, helper), pole));
+    const eq2 = cross(pole, eq1);
+
+    const cosLat = Math.cos(lat);
+    const sinLat = Math.sin(lat);
+    const cosLon = Math.cos(lon);
+    const sinLon = Math.sin(lon);
+
+    const up = normalize(add(
+      add(multiply(eq1, cosLat * cosLon), multiply(eq2, cosLat * sinLon)),
+      multiply(pole, sinLat)
+    ));
+
+    if (!ellipsoid) {
+      return { up, position: multiply(up, 6371000 + height) };
+    }
+
+    const a = ellipsoid.equatorialRadiusM;
+    const b = ellipsoid.polarRadiusM;
+    const e2 = 1 - (b * b) / (a * a);
+    const n = a / Math.sqrt(1 - e2 * sinLat * sinLat);
+    const eqR = (n + height) * cosLat;
+    const polR = (n * (1 - e2) + height) * sinLat;
+
+    return {
+      up,
+      position: add(
+        add(multiply(eq1, eqR * cosLon), multiply(eq2, eqR * sinLon)),
+        multiply(pole, polR)
+      )
+    };
+  }
+
   function earthAngularVelocity(mission) {
-    return { x: 0, y: 0, z: earthAngularVelocityMagnitude(mission) };
+    const mag = earthAngularVelocityMagnitude(mission);
+    const pole = (mission.earth && mission.earth.northPole) || { x: 0, y: 0, z: 1 };
+    return multiply(pole, mag);
   }
 
   function earthAngularVelocityMagnitude(mission) {
@@ -686,6 +811,7 @@
     launchSites,
     targetProfilesForScenario,
     defaultLaunchSiteId,
+    defaultLaunchSiteIdForScenario,
     defaultTargetProfileId,
     earthEllipsoid,
     createMissionState,

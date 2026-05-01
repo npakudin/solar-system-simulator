@@ -419,12 +419,13 @@
       }
 
       if (dist <= surfaceRadius + 100) { // 100m tolerance
-        // compute radial speed (impact speed)
         const nx = dx / dist, ny = dy / dist, nz = dz / dist;
         const relVx = rocket.velocity.x - body.velocity.x;
         const relVy = rocket.velocity.y - body.velocity.y;
         const relVz = rocket.velocity.z - body.velocity.z;
-        const impactSpeed = Math.abs(relVx * nx + relVy * ny + relVz * nz);
+        const radialSpeed = relVx * nx + relVy * ny + relVz * nz;
+        if (radialSpeed > 0) continue; // moving away — still launching
+        const impactSpeed = Math.abs(radialSpeed);
 
         rocket._landed = true;
         rocket.velocity.x = body.velocity.x;

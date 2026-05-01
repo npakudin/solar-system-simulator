@@ -13,13 +13,35 @@
   const rocketSim = window.RocketSim;
 
   const canvas = document.querySelector("#scene");
+  const panel = document.querySelector(".panel");
+  const advancedControls = document.querySelector(".advanced");
   const scenarioSelect = document.querySelector("#scenario-select");
   const runButton = document.querySelector("#toggle-run");
   const launchButton = document.querySelector("#launch-rocket");
   const resetButton = document.querySelector("#reset-sim");
   const cameraTargetSelect = document.querySelector("#camera-target");
+  const dynamicTimeScaleInput = document.querySelector("#dynamic-time-scale");
   const timeScaleInput = document.querySelector("#time-scale");
   const timeScaleNum = document.querySelector("#time-scale-num");
+
+  const TS_LOG_MIN = Math.log10(0.1);
+  const TS_LOG_MAX = Math.log10(10000);
+
+  function sliderToTimeScale(pos) {
+    return Math.pow(10, TS_LOG_MIN + (Number(pos) / 1000) * (TS_LOG_MAX - TS_LOG_MIN));
+  }
+
+  function timeScaleToSlider(ts) {
+    return Math.round((Math.log10(Math.max(Number(ts), 0.1)) - TS_LOG_MIN) / (TS_LOG_MAX - TS_LOG_MIN) * 1000);
+  }
+
+  function fmtTimeScale(ts) {
+    return ts < 10 ? parseFloat(ts.toPrecision(2)) : Math.round(ts);
+  }
+
+  function clampTimeScale(value) {
+    return Math.min(TIME_SCALE_MAX, Math.max(TIME_SCALE_MIN, Number(value)));
+  }
   const showTrailsInput = document.querySelector("#show-trails");
   const timeReadout = document.querySelector("#time-readout");
   const rocketSpeedReadout = document.querySelector("#rocket-speed");
@@ -32,13 +54,29 @@
   const rocketMassReadout = document.querySelector("#rocket-mass-readout");
   const massFlowReadout = document.querySelector("#mass-flow-readout");
   const orbitInclinationReadout = document.querySelector("#orbit-inclination");
+  const compactMissionTimeReadout = document.querySelector("#compact-mission-time");
+  const compactRocketSpeedReadout = document.querySelector("#compact-rocket-speed");
+  const compactTimeScaleReadout = document.querySelector("#compact-time-scale");
   const launchSiteSelect = document.querySelector("#launch-site-select");
   const targetProfileSelect = document.querySelector("#target-profile-select");
 
   const DEFAULT_METERS_TO_UNITS = 1 / 8.0e9;
   const DEFAULT_RADIUS_TO_UNITS = 1 / 8.0e9;
   const BASE_STEP_SECONDS = 3600;
-  const MAX_TRAIL_POINTS = 1500;
+  const MAX_FRAME_SUBSTEPS = 500;
+  const TIME_SCALE_MIN = 0.1;
+  const TIME_SCALE_MAX = 10000;
+  const DYNAMIC_TIME_SCALE = {
+    engineOn: 1,
+    burnUnder30Seconds: 2,
+    burnUnder120Seconds: 8,
+    lowOrbit: 12,
+    nearEarth: 20,
+    nearMoon: 18,
+    nearJupiter: 24,
+    longCoast: 220
+  };
+  const TRAIL_INITIAL_CAPACITY = 2000;
   const TRAIL_SAMPLE_SECONDS = {
     Sun: constants.DAY * 7,
     Mercury: constants.DAY * 2,
@@ -63,7 +101,10 @@
   let rocketMissionState = null;
   let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
   let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
+  let manualTimeScale = clampTimeScale(sliderToTimeScale(Number(timeScaleInput.value)));
+  let effectiveTimeScale = manualTimeScale;
   const cameraFollowOffset = new THREE.Vector3();
+  let lastCameraTargetName = "";
 
   // --- ISS SGP4 tracking ---
   // TLE for 2026-05-01 (NORAD 25544)
@@ -241,6 +282,7 @@
   populateScenarioSelect();
   populateLaunchSiteSelect();
   populateTargetProfileSelect(activeScenarioId);
+  applyDefaultLaunchSite();
   applyScenarioUiDefaults();
   applyScenarioCamera();
   syncSceneObjects();
@@ -251,6 +293,7 @@
     activeScenario = getScenario(activeScenarioId);
     activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
     populateTargetProfileSelect(activeScenarioId);
+    applyDefaultLaunchSite();
     resetSimulation();
     applyScenarioUiDefaults();
     applyScenarioCamera();
@@ -263,11 +306,15 @@
 
   targetProfileSelect && targetProfileSelect.addEventListener("change", () => {
     activeTargetProfileId = targetProfileSelect.value;
+    applyDefaultLaunchSite();
   });
 
   runButton.addEventListener("click", () => {
     running = !running;
     runButton.textContent = running ? "Stop" : "Start";
+    if (running) {
+      collapsePanelAfterRun();
+    }
   });
 
   launchButton.addEventListener("click", () => {
@@ -278,6 +325,10 @@
         if (pelletSystem) {
           rocketSim.resetPelletSystem(pelletSystem);
           pelletSystem.points.visible = true;
+        }
+        if (mission.launchTimeScale != null) {
+          timeScaleInput.value = timeScaleToSlider(mission.launchTimeScale);
+          timeScaleNum.value = fmtTimeScale(mission.launchTimeScale);
         }
       }
     } else {
@@ -290,6 +341,7 @@
     }
     running = true;
     runButton.textContent = "Stop";
+    collapsePanelAfterRun();
   });
 
   resetButton.addEventListener("click", () => {
@@ -303,31 +355,35 @@
   });
 
   timeScaleInput.addEventListener("input", () => {
-    timeScaleNum.value = timeScaleInput.value;
+    applyManualTimeScale(sliderToTimeScale(timeScaleInput.value));
   });
 
   timeScaleNum.addEventListener("blur", () => {
     const raw = Number(timeScaleNum.value);
-    const min = Number(timeScaleInput.min);
-    const max = Number(timeScaleInput.max);
     if (!Number.isFinite(raw) || timeScaleNum.value.trim() === "") {
-      timeScaleNum.value = timeScaleInput.value;
+      syncDisplayedTimeScale(effectiveTimeScale);
       return;
     }
-    const clamped = Math.round(Math.min(max, Math.max(min, raw)));
-    timeScaleInput.value = clamped;
-    timeScaleNum.value = clamped;
+    applyManualTimeScale(raw);
   });
 
   timeScaleNum.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       timeScaleNum.blur();
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      // value updates after keydown, so read on next tick
       setTimeout(() => {
         const v = Number(timeScaleNum.value);
-        if (Number.isFinite(v)) timeScaleInput.value = v;
+        if (Number.isFinite(v)) {
+          applyManualTimeScale(v);
+        }
       }, 0);
+    }
+  });
+
+  dynamicTimeScaleInput && dynamicTimeScaleInput.addEventListener("change", () => {
+    if (!dynamicTimeScaleInput.checked) {
+      effectiveTimeScale = manualTimeScale;
+      syncDisplayedTimeScale(effectiveTimeScale);
     }
   });
 
@@ -365,15 +421,17 @@
 
     if (running) {
       syncPelletScale();
-      const steps = Math.max(1, Math.floor(Number(timeScaleInput.value)));
-      let remainingSeconds = steps * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
+      const playbackScale = getPlaybackTimeScale();
+      syncDisplayedTimeScale(playbackScale);
+      let remainingSeconds = Math.max(playbackScale, 0.001) * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
       let guard = 0;
 
-      while (remainingSeconds > 0 && guard < 500) {
+      while (remainingSeconds > 0 && guard < MAX_FRAME_SUBSTEPS) {
         const scenarioStepSeconds = activeScenario.stepSeconds || BASE_STEP_SECONDS;
-        let stepSeconds = Math.min(remainingSeconds, scenarioStepSeconds);
+        const requestedStepSeconds = Math.min(remainingSeconds, scenarioStepSeconds);
+        let stepSeconds = requestedStepSeconds;
         if (rocketSim && rocketMissionState) {
-          stepSeconds = rocketSim.chooseStepSeconds(rocketMissionState, bodies, stepSeconds);
+          stepSeconds = rocketSim.chooseStepSeconds(rocketMissionState, bodies, requestedStepSeconds);
         }
 
         stepSeconds = Math.min(stepSeconds, remainingSeconds);
@@ -387,7 +445,9 @@
         elapsedSeconds += stepSeconds;
         updateISSPosition(bodies, elapsedSeconds);
         const rocketBody = bodies.find((b) => b.name === 'Rocket');
-        if (rocketBody) checkLandings(bodies, rocketBody, null);
+        if (rocketBody && !(rocketMissionState && rocketMissionState.attachedToPad)) {
+          checkLandings(bodies, rocketBody, null);
+        }
         rocketSim && rocketSim.updateRocketAfterPhysics(
           rocketMissionState,
           bodies,
@@ -406,6 +466,107 @@
     updateSkyPosition();
     updateReadouts();
     renderer.render(scene, camera);
+  }
+
+  function getPlaybackTimeScale() {
+    effectiveTimeScale = dynamicTimeScaleInput && dynamicTimeScaleInput.checked
+      ? chooseDynamicPlaybackScale()
+      : manualTimeScale;
+    return effectiveTimeScale;
+  }
+
+  function chooseDynamicPlaybackScale() {
+    const missionStatus = rocketSim && rocketSim.missionStatus(rocketMissionState, bodies);
+    if (!missionStatus) {
+      return manualTimeScale;
+    }
+
+    if (missionStatus.engineOn) {
+      return DYNAMIC_TIME_SCALE.engineOn;
+    }
+
+    if (missionStatus.nextBurnInSeconds <= 30) {
+      return DYNAMIC_TIME_SCALE.burnUnder30Seconds;
+    }
+
+    if (missionStatus.nextBurnInSeconds <= 120) {
+      return DYNAMIC_TIME_SCALE.burnUnder120Seconds;
+    }
+
+    const rocket = bodies.find((body) => body.name === "Rocket");
+    if (!rocket) {
+      return manualTimeScale;
+    }
+
+    const earth = bodies.find((body) => body.name === "Earth");
+    if (earth) {
+      const earthAltitude = distance(rocket.position, earth.position) - earth.radius;
+      if (earthAltitude < 600000) {
+        return DYNAMIC_TIME_SCALE.lowOrbit;
+      }
+      if (earthAltitude < earth.radius * 20) {
+        return DYNAMIC_TIME_SCALE.nearEarth;
+      }
+    }
+
+    const moon = bodies.find((body) => body.name === "Moon");
+    if (isNearFlybyBody(rocket, moon, 18)) {
+      return DYNAMIC_TIME_SCALE.nearMoon;
+    }
+
+    const jupiter = bodies.find((body) => body.name === "Jupiter");
+    if (isNearFlybyBody(rocket, jupiter, 80)) {
+      return DYNAMIC_TIME_SCALE.nearJupiter;
+    }
+
+    return Math.min(TIME_SCALE_MAX, Math.max(manualTimeScale, DYNAMIC_TIME_SCALE.longCoast));
+  }
+
+  function isNearFlybyBody(rocket, body, radiusMultiplier) {
+    if (!rocket || !body) {
+      return false;
+    }
+    return distance(rocket.position, body.position) < body.radius * radiusMultiplier;
+  }
+
+  function applyManualTimeScale(value) {
+    manualTimeScale = clampTimeScale(value);
+    effectiveTimeScale = manualTimeScale;
+    if (dynamicTimeScaleInput) {
+      dynamicTimeScaleInput.checked = false;
+    }
+    syncDisplayedTimeScale(effectiveTimeScale);
+  }
+
+  function syncDisplayedTimeScale(value) {
+    const scale = clampTimeScale(value);
+    timeScaleInput.value = timeScaleToSlider(scale);
+    timeScaleNum.value = fmtTimeScale(scale);
+    if (compactTimeScaleReadout) {
+      compactTimeScaleReadout.textContent = `${fmtTimeScale(scale)}x`;
+    }
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia("(max-width: 760px)").matches;
+  }
+
+  function setPanelCollapsed(collapsed) {
+    if (!panel) {
+      return;
+    }
+    panel.classList.toggle("panel-collapsed", collapsed);
+    panel.classList.toggle("panel-expanded", !collapsed);
+  }
+
+  function collapsePanelAfterRun() {
+    if (isMobileLayout()) {
+      setPanelCollapsed(true);
+      if (advancedControls) {
+        advancedControls.open = false;
+      }
+      resizeRenderer();
+    }
   }
 
   function syncSceneObjects() {
@@ -509,6 +670,14 @@
     syncSceneObjects();
     syncReferenceOrbits();
     syncPelletScale();
+    if (isMobileLayout()) {
+      setPanelCollapsed(false);
+      if (advancedControls) {
+        advancedControls.open = false;
+      }
+      resizeRenderer();
+    }
+    syncDisplayedTimeScale(getPlaybackTimeScale());
   }
 
   function applyScenarioCamera() {
@@ -551,11 +720,23 @@
     controls.update();
   }
 
+  function applyDefaultLaunchSite() {
+    if (!rocketSim || !launchSiteSelect) return;
+    const siteId = rocketSim.defaultLaunchSiteIdForScenario(activeScenarioId, activeTargetProfileId);
+    if (siteId && launchSiteSelect.value !== siteId) {
+      activeLaunchSiteId = siteId;
+      launchSiteSelect.value = siteId;
+    }
+  }
+
   function applyScenarioUiDefaults() {
     const defaults = activeScenario.ui || {};
-    if (defaults.timeScale) {
-      timeScaleInput.value = defaults.timeScale;
-      timeScaleNum.value = defaults.timeScale;
+    if (defaults.timeScale != null) {
+      manualTimeScale = clampTimeScale(defaults.timeScale);
+      if (!dynamicTimeScaleInput || !dynamicTimeScaleInput.checked) {
+        effectiveTimeScale = manualTimeScale;
+      }
+      syncDisplayedTimeScale(getPlaybackTimeScale());
     }
     if (defaults.cameraTarget && hasSelectOption(cameraTargetSelect, defaults.cameraTarget)) {
       cameraTargetSelect.value = defaults.cameraTarget;
@@ -803,7 +984,8 @@
   }
 
   function createTrail(body) {
-    const positions = new Float32Array(MAX_TRAIL_POINTS * 3);
+    const capacity = TRAIL_INITIAL_CAPACITY;
+    const positions = new Float32Array(capacity * 3);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setDrawRange(0, 0);
@@ -815,12 +997,13 @@
     });
 
     const line = new THREE.Line(geometry, material);
+    line.frustumCulled = false;
     line.visible = showTrailsInput.checked;
-    return { line, points: [], positions, nextSampleTime: elapsedSeconds };
+    return { line, positions, capacity, count: 0, nextSampleTime: elapsedSeconds };
   }
 
   function resetTrail(trail) {
-    trail.points.length = 0;
+    trail.count = 0;
     trail.nextSampleTime = elapsedSeconds;
     trail.line.geometry.setDrawRange(0, 0);
     trail.line.geometry.attributes.position.needsUpdate = true;
@@ -901,8 +1084,9 @@
       return;
     }
 
-    const isNearEarthScenario = (activeScenario.stepSeconds || BASE_STEP_SECONDS) <= 10;
-    const rocketInterval = isNearEarthScenario ? 30 : TRAIL_SAMPLE_SECONDS.Rocket;
+    const rocketInterval = rocketMissionState
+      ? Math.max(10, activeScenario.stepSeconds || BASE_STEP_SECONDS)
+      : TRAIL_SAMPLE_SECONDS.Rocket;
 
     for (const body of bodies) {
       const trail = trails.get(body.name);
@@ -923,19 +1107,22 @@
   }
 
   function appendTrailPoint(trail, scenePosition) {
-    trail.points.push(scenePosition.clone());
-    if (trail.points.length > MAX_TRAIL_POINTS) {
-      trail.points.shift();
+    if (trail.count >= trail.capacity) {
+      const newCapacity = trail.capacity * 2;
+      const newPositions = new Float32Array(newCapacity * 3);
+      newPositions.set(trail.positions.subarray(0, trail.count * 3));
+      trail.positions = newPositions;
+      trail.capacity = newCapacity;
+      trail.line.geometry.setAttribute("position", new THREE.BufferAttribute(newPositions, 3));
     }
 
-    for (let i = 0; i < trail.points.length; i += 1) {
-      const point = trail.points[i];
-      trail.positions[i * 3] = point.x;
-      trail.positions[i * 3 + 1] = point.y;
-      trail.positions[i * 3 + 2] = point.z;
-    }
+    const i = trail.count;
+    trail.positions[i * 3] = scenePosition.x;
+    trail.positions[i * 3 + 1] = scenePosition.y;
+    trail.positions[i * 3 + 2] = scenePosition.z;
+    trail.count++;
 
-    trail.line.geometry.setDrawRange(0, trail.points.length);
+    trail.line.geometry.setDrawRange(0, trail.count);
     trail.line.geometry.attributes.position.needsUpdate = true;
   }
 
@@ -953,6 +1140,7 @@
   function updateCameraTarget(deltaSeconds) {
     const targetName = cameraTargetSelect.value;
     if (targetName === "free") {
+      lastCameraTargetName = targetName;
       return;
     }
 
@@ -962,8 +1150,20 @@
     }
 
     const target = toScenePosition(body.position);
+    const switched = targetName !== lastCameraTargetName;
+    lastCameraTargetName = targetName;
+
+    if (switched) {
+      // Camera stays at current world position; orbit pivot snaps to new body.
+      // cameraFollowOffset is set so subsequent frames track the body with the same offset.
+      controls.target.copy(target);
+      cameraFollowOffset.copy(camera.position).sub(target);
+      return;
+    }
+
+    // Keep camera-to-target offset constant: camera follows body immediately.
     cameraFollowOffset.copy(camera.position).sub(controls.target);
-    controls.target.lerp(target, Math.min(1, deltaSeconds * 3));
+    controls.target.copy(target);
     camera.position.copy(controls.target).add(cameraFollowOffset);
   }
 
@@ -985,6 +1185,9 @@
     if (!rocket) {
       rocketSpeedReadout.textContent = "not launched";
       jupiterDistanceReadout.textContent = "not launched";
+      if (compactRocketSpeedReadout) {
+        compactRocketSpeedReadout.textContent = "not launched";
+      }
       updateMissionReadouts(null);
       return;
     }
@@ -994,6 +1197,9 @@
       ? `, fuel ${(missionStatus.fuelMass / 1000).toFixed(1)} t`
       : "";
     rocketSpeedReadout.textContent = `${(speed(rocket) / 1000).toFixed(2)} km/s${fuelText}`;
+    if (compactRocketSpeedReadout) {
+      compactRocketSpeedReadout.textContent = `${(speed(rocket) / 1000).toFixed(2)} km/s`;
+    }
     jupiterDistanceReadout.textContent = jupiter
       ? `${(distance(rocket.position, jupiter.position) / 1e9).toFixed(2)} Gm`
       : "no Jupiter";
@@ -1005,6 +1211,9 @@
     const mission = currentMission();
     if (!mission) {
       missionTimeReadout.textContent = "n/a";
+      if (compactMissionTimeReadout) {
+        compactMissionTimeReadout.textContent = "n/a";
+      }
       flightPhaseReadout.textContent = "n/a";
       nextBurnReadout.textContent = "n/a";
       throttleReadout.textContent = "n/a";
@@ -1017,6 +1226,9 @@
 
     if (!missionStatus) {
       missionTimeReadout.textContent = "0 s";
+      if (compactMissionTimeReadout) {
+        compactMissionTimeReadout.textContent = "0 s";
+      }
       flightPhaseReadout.textContent = "ready";
       nextBurnReadout.textContent = firstBurnText(mission);
       throttleReadout.textContent = "0%";
@@ -1028,6 +1240,9 @@
     }
 
     missionTimeReadout.textContent = `${missionStatus.missionTime.toFixed(1)} s`;
+    if (compactMissionTimeReadout) {
+      compactMissionTimeReadout.textContent = formatDuration(missionStatus.missionTime);
+    }
     flightPhaseReadout.textContent = formatCommand(missionStatus);
     nextBurnReadout.textContent = missionStatus.nextBurnName
       ? `${missionStatus.nextBurnName} in ${formatDuration(missionStatus.nextBurnInSeconds)}`

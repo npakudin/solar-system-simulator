@@ -163,6 +163,7 @@
       vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
       programTemplate: "interplanetary-note",
       headingMode: "east",
+      defaultLaunchSiteId: "cape-canaveral",
       timeScale: 1
     },
     {
@@ -194,8 +195,9 @@
       targetOrbit: { name: "Lunar orbit 100km", inclinationDeg: 51.6 },
       vehicle: { ...heavyVehicle },
       programTemplate: "lunar-orbit",
-      headingDeg: 63.33,
-      timeScale: 1
+      headingMode: "inclination",
+      defaultLaunchSiteId: "cape-canaveral",
+      timeScale: 0.1
     },
     {
       id: "artemis-2",
@@ -204,8 +206,9 @@
       targetOrbit: { name: "Artemis II free return", inclinationDeg: 51.6 },
       vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
       programTemplate: "artemis-2",
-      headingDeg: 63.33,
-      timeScale: 1
+      headingMode: "inclination",
+      defaultLaunchSiteId: "cape-canaveral",
+      timeScale: 0.1
     },
     {
       id: "lunar-landing",
@@ -214,8 +217,9 @@
       targetOrbit: { name: "Lunar surface", inclinationDeg: 51.6 },
       vehicle: { ...heavyVehicle, fuelMassKg: 480000 },
       programTemplate: "lunar-landing",
-      headingDeg: 63.33,
-      timeScale: 1
+      headingMode: "inclination",
+      defaultLaunchSiteId: "cape-canaveral",
+      timeScale: 0.1
     },
     {
       id: "vostok-1",
@@ -225,6 +229,7 @@
       vehicle: { ...baseVehicle, dryMassKg: 4700, fuelMassKg: 180000, exhaustVelocityMps: 3100, maxMassFlowKgPerSec: 600 },
       programTemplate: "vostok-1",
       headingDeg: 43,
+      defaultLaunchSiteId: "baikonur",
       timeScale: 1
     },
     {
@@ -234,8 +239,9 @@
       targetOrbit: { name: "Moon surface (Sea of Tranquility)", inclinationDeg: 51.6 },
       vehicle: { ...heavyVehicle, fuelMassKg: 480000 },
       programTemplate: "apollo-11",
-      headingDeg: 63.33,
-      timeScale: 1
+      headingMode: "inclination",
+      defaultLaunchSiteId: "cape-canaveral",
+      timeScale: 0.1
     },
     {
       id: "jupiter-return",
@@ -245,6 +251,7 @@
       vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
       programTemplate: "interplanetary-note",
       headingMode: "east",
+      defaultLaunchSiteId: "cape-canaveral",
       timeScale: 1
     },
     {
@@ -255,9 +262,14 @@
       vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
       programTemplate: "interplanetary-note",
       headingMode: "east",
+      defaultLaunchSiteId: "cape-canaveral",
       timeScale: 1
     }
   ];
+
+  // Earth's north pole in the J2000 ecliptic frame used by real heliocentric scenarios.
+  // ecliptic lon=270°, ecliptic lat=66.56° (= 90° - 23.44° obliquity)
+  const ECLIPTIC_NORTH_POLE = { x: 0, y: -0.3978, z: 0.9175 };
 
   function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
     const profile = targetProfiles.find((item) => {
@@ -275,13 +287,18 @@
     const vehicle = { ...profile.vehicle };
     const isLunarMission = ["lunar-orbit", "artemis-2", "lunar-landing", "apollo-11"].includes(profile.programTemplate);
 
+    const scenario = window.SolarScenarioData && window.SolarScenarioData.scenarios.find((s) => s.id === scenarioId);
+    const isEclipticFrame = scenario && scenario.initialState && scenario.initialState.type === "vectors";
+    const missionEarth = isEclipticFrame ? { ...earth, northPole: ECLIPTIC_NORTH_POLE } : earth;
+
     return {
       id: `${site.id}-${profile.id}`,
       label: `${site.name} -> ${profile.label}`,
       scenarioIds: profile.scenarioIds,
       launchSite: { ...site },
-      earth,
+      earth: missionEarth,
       vehicle,
+      launchTimeScale: profile.timeScale || 1,
       targetOrbit: { ...profile.targetOrbit },
       program: buildProgram(profile, headingDeg),
       timestep: {
@@ -290,7 +307,9 @@
         preBurnSeconds: 1,
         nearEarthSeconds: 2,
         orbitSeconds: isLunarMission ? 20 : 10,
-        farSeconds: isLunarMission ? 300 : 60
+        farSeconds: isLunarMission ? 300 : 60,
+        closeBodySeconds: isLunarMission ? 15 : 10,
+        flybySeconds: isLunarMission ? 120 : 45
       },
       metadata: {
         launchSite: site.name,
@@ -332,9 +351,8 @@
       return site.defaultHeadingDeg || 90;
     }
 
-    const cosAz = Math.cos(inclination * Math.PI / 180) / Math.cos(site.latDeg * Math.PI / 180);
-    const azimuthFromNorth = Math.asin(Math.max(-1, Math.min(1, cosAz))) * 180 / Math.PI;
-    return 90 - azimuthFromNorth;
+    const sinAz = Math.cos(inclination * Math.PI / 180) / Math.cos(site.latDeg * Math.PI / 180);
+    return Math.asin(Math.max(-1, Math.min(1, sinAz))) * 180 / Math.PI;
   }
 
   function buildProgram(profile, headingDeg) {
@@ -345,7 +363,12 @@
         { name: "coast to correction 1", start: 300, end: 62000, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
         { name: "correction 1: engine 62000-62120s", start: 62000, end: 62120, throttle: 0.04, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
         { name: "coast to correction 2", start: 62120, end: 145000, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
-        { name: "correction 2: engine 145000-145080s", start: 145000, end: 145080, throttle: 0.03, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } }
+        { name: "correction 2: engine 145000-145080s", start: 145000, end: 145080, throttle: 0.03, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "coast to Moon — final approach", start: 145080, end: 430704, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
+        { name: "LOI burn — enter lunar capture orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } },
+        { name: "coast to perilune", start: 430900, end: 434311, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LLO (<=2R Moon): engine 434311-434380s", start: 434311, end: 434380, throttle: 0.12, attitude: { mode: "retrograde" } },
+        { name: "coast in lunar orbit", start: 434380, end: 450000, throttle: 0, attitude: { mode: "prograde" } }
       ];
     }
 
@@ -407,7 +430,10 @@
         { name: "circularize LEO: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
         { name: "TLI burn: engine 530-620s", start: 530, end: 620, throttle: 0.9, attitude: { mode: "prograde" } },
         { name: "coast to Moon — 5 days", start: 620, end: 430704, throttle: 0, attitude: { mode: "target-body", target: "Moon", leadSeconds: 86400 } },
-        { name: "LOI burn — enter lunar orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } }
+        { name: "LOI burn — enter lunar capture orbit: engine 430704-430900s", start: 430704, end: 430900, throttle: 0.4, attitude: { mode: "retrograde" } },
+        { name: "coast to perilune", start: 430900, end: 434311, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize LLO: engine 434311-434380s", start: 434311, end: 434380, throttle: 0.12, attitude: { mode: "retrograde" } },
+        { name: "coast in lunar orbit", start: 434380, end: 450000, throttle: 0, attitude: { mode: "prograde" } }
       ];
     }
 

@@ -363,7 +363,7 @@
       stepSeconds: 60,
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
-      ui: { cameraTarget: "earth", timeScale: 400 }
+      ui: { cameraTarget: "earth", timeScale: 1 }
     },
     {
       id: "lunar-landing-mission",
