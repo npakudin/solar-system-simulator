@@ -100,6 +100,9 @@
   let lastFrameTime = 0;
   let rocketMissionState = null;
   let rocketLaunched = false;
+  let preLaunchPhase = false;
+  let launchWindowAtSeconds = null;
+  const PRE_LAUNCH_TIME_SCALE = 100;
   let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
   let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
   let manualTimeScale = clampTimeScale(sliderToTimeScale(Number(timeScaleInput.value)));
@@ -116,6 +119,7 @@
 
   let _issSatrec = null;
   let _issEpochMs = null;
+  let _issGmst0 = null;
 
   function initISS() {
     if (typeof satellite === 'undefined') {
@@ -124,6 +128,7 @@
     }
     _issSatrec = satellite.twoline2satrec(ISS_TLE_LINE1, ISS_TLE_LINE2);
     _issEpochMs = Date.now();
+    _issGmst0 = satellite.gstime(new Date(_issEpochMs));
     console.log('[ISS] SGP4 initialised from hardcoded TLE');
   }
 
@@ -139,19 +144,68 @@
     const posVel = satellite.propagate(_issSatrec, nowDate);
     if (!posVel || !posVel.position) return;
 
-    // satellite.js returns km in ECI (J2000 Earth-centred inertial)
-    // Physics frame is also Cartesian m; convert km -> m
-    issBody.position.x = earth.position.x + posVel.position.x * 1000;
-    issBody.position.y = earth.position.y + posVel.position.y * 1000;
+    // satellite.js returns km in ECI (J2000 Earth-centred inertial).
+    // Physics frame is a frozen-ECEF frame: x = geographic lon 0° at simulation epoch.
+    // Rotate ECI -> frozen-ECEF by -GMST0 around z-axis, then convert km -> m.
+    const cg = Math.cos(-_issGmst0), sg = Math.sin(-_issGmst0);
+    const px = posVel.position.x * 1000, py = posVel.position.y * 1000;
+    const vx = posVel.velocity.x * 1000, vy = posVel.velocity.y * 1000;
+    issBody.position.x = earth.position.x + px * cg - py * sg;
+    issBody.position.y = earth.position.y + px * sg + py * cg;
     issBody.position.z = earth.position.z + posVel.position.z * 1000;
-
-    issBody.velocity.x = earth.velocity.x + posVel.velocity.x * 1000;
-    issBody.velocity.y = earth.velocity.y + posVel.velocity.y * 1000;
+    issBody.velocity.x = earth.velocity.x + vx * cg - vy * sg;
+    issBody.velocity.y = earth.velocity.y + vx * sg + vy * cg;
     issBody.velocity.z = earth.velocity.z + posVel.velocity.z * 1000;
   }
 
   // Initialise ISS once satellite.js is available (it's loaded synchronously before this script)
   initISS();
+
+  // Returns seconds until the next launch window (when launchSite enters the ISS orbital plane).
+  // Uses the SGP4-derived orbital normal and GMST to solve analytically.
+  // Returns 0 if satellite.js is unavailable.
+  function computeLaunchWindowSeconds(site) {
+    if (typeof satellite === 'undefined' || !_issSatrec || !_issEpochMs) return 0;
+    const date0 = new Date(_issEpochMs);
+    const posVel = satellite.propagate(_issSatrec, date0);
+    if (!posVel || !posVel.position || !posVel.velocity) return 0;
+
+    const { x: rx, y: ry, z: rz } = posVel.position;
+    const { x: vx, y: vy, z: vz } = posVel.velocity;
+    const hx = ry*vz - rz*vy, hy = rz*vx - rx*vz, hz = rx*vy - ry*vx;
+    const hMag = Math.sqrt(hx*hx + hy*hy + hz*hz);
+    if (hMag === 0) return 0;
+    const nx = hx/hMag, ny = hy/hMag, nz = hz/hMag;
+
+    const ω = 7.2921150e-5; // Earth sidereal rotation rad/s
+    const latRad = site.latDeg * Math.PI / 180;
+    const lonRad = site.lonDeg * Math.PI / 180;
+    const gmst0 = satellite.gstime(date0);
+    const lonEci0 = lonRad + gmst0;
+
+    // Solve: nx*cos(lat)*cos(lonEci0+ω*t) + ny*cos(lat)*sin(lonEci0+ω*t) + nz*sin(lat) = 0
+    const A = nx * Math.cos(latRad);
+    const B = ny * Math.cos(latRad);
+    const C = nz * Math.sin(latRad);
+    const R = Math.sqrt(A*A + B*B);
+    if (R < 1e-10) return 0;
+
+    const cosArg = -C / R;
+    if (Math.abs(cosArg) > 1) return 0;
+    const alpha = Math.acos(cosArg); // in [0, π]
+    const phi = Math.atan2(B, A);
+    const T_sidereal = 2 * Math.PI / ω; // ~86164 s
+
+    function nextPositiveT(theta) {
+      const t = (theta - lonEci0) / ω;
+      const n = ((t % T_sidereal) + T_sidereal) % T_sidereal;
+      return n < 60 ? n + T_sidereal : n; // skip if essentially now
+    }
+
+    const t1 = nextPositiveT(phi + alpha);
+    const t2 = nextPositiveT(phi - alpha);
+    return Math.min(t1, t2);
+  }
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#03050a");
@@ -316,9 +370,24 @@
     if (rocketLaunched) return;
     rocketLaunched = true;
     const mission = currentMission();
+    if (mission && mission.preLaunchWindow) {
+      const site = mission.launchSite;
+      const windowSeconds = computeLaunchWindowSeconds(site);
+      if (windowSeconds > 60) {
+        preLaunchPhase = true;
+        launchWindowAtSeconds = windowSeconds;
+        showLaunchWindowOverlay(windowSeconds);
+        syncSceneObjects();
+        return;
+      }
+    }
+    activateLaunch(mission, 0);
+  }
+
+  function activateLaunch(mission, earthRotationOffsetSeconds) {
     if (mission) {
       if (!rocketMissionState) {
-        rocketMissionState = rocketSim.createMissionState(mission, bodies);
+        rocketMissionState = rocketSim.createMissionState(mission, bodies, earthRotationOffsetSeconds);
         if (pelletSystem) {
           rocketSim.resetPelletSystem(pelletSystem);
           pelletSystem.points.visible = true;
@@ -399,6 +468,58 @@
   landingOverlay.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:24px 40px;border-radius:12px;font-size:24px;font-weight:bold;z-index:1000;text-align:center;border:2px solid #0f0;';
   document.body.appendChild(landingOverlay);
 
+  // Launch window countdown overlay
+  const launchWindowOverlay = document.createElement('div');
+  launchWindowOverlay.id = 'launch-window-overlay';
+  launchWindowOverlay.style.cssText = [
+    'display:none',
+    'position:fixed',
+    'top:50%',
+    'left:50%',
+    'transform:translate(-50%,-50%)',
+    'background:rgba(0,8,20,0.88)',
+    'color:#7cf',
+    'padding:20px 36px',
+    'border-radius:12px',
+    'font-family:monospace',
+    'font-size:14px',
+    'z-index:999',
+    'text-align:center',
+    'border:1px solid #1af',
+    'pointer-events:none'
+  ].join(';');
+  launchWindowOverlay.innerHTML = `
+    <div style="font-size:11px;opacity:0.7;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">
+      Ожидание окна запуска
+    </div>
+    <div id="lw-countdown" style="font-size:28px;font-weight:bold;letter-spacing:2px;color:#fff">—</div>
+    <div style="font-size:11px;opacity:0.6;margin-top:6px">Байконур входит в плоскость орбиты МКС</div>
+  `;
+  document.body.appendChild(launchWindowOverlay);
+
+  function showLaunchWindowOverlay(totalSeconds) {
+    launchWindowOverlay.style.display = 'block';
+    updateLaunchWindowCountdown(totalSeconds);
+  }
+
+  function hideLaunchWindowOverlay() {
+    launchWindowOverlay.style.display = 'none';
+  }
+
+  function updateLaunchWindowCountdown(remainingSeconds) {
+    const el = document.getElementById('lw-countdown');
+    if (!el) return;
+    if (remainingSeconds <= 0) {
+      el.textContent = 'ЗАПУСК';
+      return;
+    }
+    const h = Math.floor(remainingSeconds / 3600);
+    const m = Math.floor((remainingSeconds % 3600) / 60);
+    const s = Math.floor(remainingSeconds % 60);
+    const pad = (n) => String(n).padStart(2, '0');
+    el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+
   window.showLandingResult = function(success, speedMs, bodyName) {
     const body = bodyName || 'surface';
     if (success) {
@@ -447,6 +568,14 @@
         stepSimulation(bodies, stepSeconds);
         elapsedSeconds += stepSeconds;
         updateISSPosition(bodies, elapsedSeconds);
+
+        if (preLaunchPhase && launchWindowAtSeconds !== null && elapsedSeconds >= launchWindowAtSeconds) {
+          preLaunchPhase = false;
+          hideLaunchWindowOverlay();
+          const mission = currentMission();
+          activateLaunch(mission, launchWindowAtSeconds);
+        }
+
         const rocketBody = bodies.find((b) => b.name === 'Rocket');
         if (rocketBody && !(rocketMissionState && rocketMissionState.attachedToPad)) {
           checkLandings(bodies, rocketBody, null);
@@ -472,10 +601,17 @@
     controls.update();
     updateSkyPosition();
     updateReadouts();
+    if (preLaunchPhase && launchWindowAtSeconds !== null) {
+      updateLaunchWindowCountdown(launchWindowAtSeconds - elapsedSeconds);
+    }
     renderer.render(scene, camera);
   }
 
   function getPlaybackTimeScale() {
+    if (preLaunchPhase) {
+      effectiveTimeScale = Math.max(PRE_LAUNCH_TIME_SCALE, manualTimeScale);
+      return effectiveTimeScale;
+    }
     effectiveTimeScale = dynamicTimeScaleInput && dynamicTimeScaleInput.checked
       ? chooseDynamicPlaybackScale()
       : manualTimeScale;
@@ -666,6 +802,9 @@
 
   function resetSimulation() {
     landingOverlay.style.display = 'none';
+    hideLaunchWindowOverlay();
+    preLaunchPhase = false;
+    launchWindowAtSeconds = null;
     bodies = createInitialBodies(activeScenarioId);
     elapsedSeconds = 0;
     running = false;
@@ -1247,7 +1386,7 @@
   }
 
   function updateReadouts() {
-    timeReadout.textContent = `${(elapsedSeconds / constants.YEAR).toFixed(2)} years`;
+    timeReadout.textContent = formatElapsedTime(elapsedSeconds);
 
     const rocket = bodies.find((body) => body.name === "Rocket");
 
@@ -1326,9 +1465,9 @@
     }
 
     if (!missionStatus) {
-      missionTimeReadout.textContent = "0 s";
+      missionTimeReadout.textContent = formatElapsedTime(0);
       if (compactMissionTimeReadout) {
-        compactMissionTimeReadout.textContent = "0 s";
+        compactMissionTimeReadout.textContent = formatElapsedTime(0);
       }
       flightPhaseReadout.textContent = "ready";
       nextBurnReadout.textContent = firstBurnText(mission);
@@ -1338,9 +1477,9 @@
       return;
     }
 
-    missionTimeReadout.textContent = `${missionStatus.missionTime.toFixed(1)} s`;
+    missionTimeReadout.textContent = formatElapsedTime(missionStatus.missionTime);
     if (compactMissionTimeReadout) {
-      compactMissionTimeReadout.textContent = formatDuration(missionStatus.missionTime);
+      compactMissionTimeReadout.textContent = formatElapsedTime(missionStatus.missionTime);
     }
     flightPhaseReadout.textContent = formatCommand(missionStatus);
     nextBurnReadout.textContent = missionStatus.nextBurnName
@@ -1377,6 +1516,19 @@
       return `${(seconds / 60).toFixed(1)}m`;
     }
     return `${(seconds / 3600).toFixed(1)}h`;
+  }
+
+  function formatElapsedTime(totalSeconds) {
+    const s = Math.floor(totalSeconds % 60);
+    const m = Math.floor(totalSeconds / 60) % 60;
+    const h = Math.floor(totalSeconds / 3600) % 24;
+    const d = Math.floor(totalSeconds / 86400) % 365;
+    const y = Math.floor(totalSeconds / (365.25 * 86400));
+    if (y > 0) return `${y}y ${d}d ${h}h ${m}m ${s}s`;
+    if (d > 0) return `${d}d ${h}h ${m}m ${s}s`;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   }
 
   function syncReferenceOrbits() {
@@ -1424,7 +1576,7 @@
       : null;
 
     for (const { site, dot } of launchSiteMarkers) {
-      const theta = site.lonRad + getBodySpinAngle(earth);
+      const theta = site.lonRad - getBodySpinAngle(earth);
       _siteVec.set(
         Math.cos(site.latRad) * Math.cos(theta),
         Math.sin(site.latRad),

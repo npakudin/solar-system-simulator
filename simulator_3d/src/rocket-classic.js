@@ -52,7 +52,7 @@
     return LAUNCH_CONFIG && LAUNCH_CONFIG.earth && LAUNCH_CONFIG.earth.ellipsoid;
   }
 
-  function createMissionState(mission, bodies) {
+  function createMissionState(mission, bodies, earthRotationOffsetSeconds = 0) {
     const earth = findBody(bodies, "Earth");
     if (!earth || bodies.some((body) => body.name === "Rocket")) {
       return null;
@@ -60,7 +60,7 @@
 
     const site = mission.launchSite;
     const vehicle = mission.vehicle;
-    const surface = surfaceState(earth, site, mission, 0);
+    const surface = surfaceState(earth, site, mission, earthRotationOffsetSeconds);
     const rocket = {
       name: "Rocket",
       color: "#f7f7f2",
@@ -81,6 +81,7 @@
     return {
       mission,
       rocket,
+      earthRotationOffsetSeconds,
       missionTime: 0,
       attachedToPad: true,
       pelletAccumulator: 0,
@@ -588,7 +589,8 @@
   }
 
   function lockRocketToPad(state, earth) {
-    const surface = surfaceState(earth, state.mission.launchSite, state.mission, state.missionTime);
+    const offset = state.earthRotationOffsetSeconds || 0;
+    const surface = surfaceState(earth, state.mission.launchSite, state.mission, offset + state.missionTime);
     state.rocket.position = add(surface.position, multiply(surface.up, 50));
     state.rocket.velocity = surface.velocity;
     state.rocket.attitudeDirection = surface.up;

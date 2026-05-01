@@ -175,6 +175,7 @@
       programTemplate: "soyuz-iss",
       headingDeg: 63.33,
       defaultLaunchSiteId: "baikonur",
+      preLaunchWindow: true,
       timeScale: 1
     },
     {
@@ -300,6 +301,7 @@
       earth: missionEarth,
       vehicle,
       launchTimeScale: profile.timeScale || 1,
+      preLaunchWindow: profile.preLaunchWindow || false,
       targetOrbit: { ...profile.targetOrbit },
       program: buildProgram(profile, headingDeg),
       timestep: {

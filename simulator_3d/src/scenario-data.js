@@ -477,7 +477,7 @@
 
   window.SolarScenarioData = {
     bodyCatalog,
-    defaultScenarioId: "toy-earth-moon-rocket",
+    defaultScenarioId: "soyuz-iss-baikonur",
     scenarios
   };
 })();
