@@ -43,15 +43,16 @@
   }
   const showTrailsInput = document.querySelector("#show-trails");
   const timeReadout = document.querySelector("#time-readout");
+  const rocketSpeedLabel = document.querySelector("#rocket-speed-label");
   const rocketSpeedReadout = document.querySelector("#rocket-speed");
-  const jupiterDistanceReadout = document.querySelector("#jupiter-distance");
+  const targetDistanceLabel = document.querySelector("#target-distance-label");
+  const targetDistanceReadout = document.querySelector("#target-distance");
+  const speedToTargetReadout = document.querySelector("#speed-to-target");
   const missionTimeReadout = document.querySelector("#mission-time");
   const flightPhaseReadout = document.querySelector("#flight-phase");
   const nextBurnReadout = document.querySelector("#next-burn-readout");
   const throttleReadout = document.querySelector("#throttle-readout");
   const fuelReadout = document.querySelector("#fuel-readout");
-  const rocketMassReadout = document.querySelector("#rocket-mass-readout");
-  const massFlowReadout = document.querySelector("#mass-flow-readout");
   const orbitInclinationReadout = document.querySelector("#orbit-inclination");
   const compactMissionTimeReadout = document.querySelector("#compact-mission-time");
   const compactRocketSpeedReadout = document.querySelector("#compact-rocket-speed");
@@ -105,6 +106,8 @@
   let effectiveTimeScale = manualTimeScale;
   const cameraFollowOffset = new THREE.Vector3();
   let lastCameraTargetName = "";
+  let flybyTargetIndex = 0;
+  let flybyTargetMinDist = Infinity;
 
   // --- ISS SGP4 tracking ---
   // TLE for 2026-05-01 (NORAD 25544)
@@ -664,6 +667,8 @@
     running = false;
     rocketMissionState = null;
     rocketLaunched = false;
+    flybyTargetIndex = 0;
+    flybyTargetMinDist = Infinity;
     if (rocketSim && pelletSystem) {
       rocketSim.resetPelletSystem(pelletSystem);
       pelletSystem.points.visible = false;
@@ -1180,15 +1185,74 @@
     }
   }
 
+  function speedRefBody(rocket) {
+    const moon = bodies.find((b) => b.name === "Moon");
+    if (moon && distance(rocket.position, moon.position) < moon.radius * 40) return moon;
+    const earth = bodies.find((b) => b.name === "Earth");
+    if (earth && distance(rocket.position, earth.position) < earth.radius * 150) return earth;
+    const jupiter = bodies.find((b) => b.name === "Jupiter");
+    if (jupiter && distance(rocket.position, jupiter.position) < jupiter.radius * 700) return jupiter;
+    return bodies.find((b) => b.name === "Sun") || null;
+  }
+
+  function speedRelativeTo(rocket, refBody) {
+    if (!refBody) return speed(rocket);
+    const dvx = rocket.velocity.x - refBody.velocity.x;
+    const dvy = rocket.velocity.y - refBody.velocity.y;
+    const dvz = rocket.velocity.z - refBody.velocity.z;
+    return Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+  }
+
+  function closingSpeed(rocket, targetBody) {
+    const dx = targetBody.position.x - rocket.position.x;
+    const dy = targetBody.position.y - rocket.position.y;
+    const dz = targetBody.position.z - rocket.position.z;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist === 0) return 0;
+    const ux = dx / dist, uy = dy / dist, uz = dz / dist;
+    const dvx = rocket.velocity.x - targetBody.velocity.x;
+    const dvy = rocket.velocity.y - targetBody.velocity.y;
+    const dvz = rocket.velocity.z - targetBody.velocity.z;
+    return dvx * ux + dvy * uy + dvz * uz;
+  }
+
+  function formatDist(meters) {
+    if (meters < 1e6) return `${(meters / 1e3).toFixed(0)} km`;
+    if (meters < 1e9) return `${(meters / 1e6).toFixed(1)} Mm`;
+    if (meters < 1e12) return `${(meters / 1e9).toFixed(2)} Gm`;
+    return `${(meters / 1e12).toFixed(2)} Tm`;
+  }
+
+  function getCurrentFlybyTargetName() {
+    const targets = (activeScenario && activeScenario.flybyTargets) || [];
+    if (!targets.length) return null;
+    return targets[Math.min(flybyTargetIndex, targets.length - 1)];
+  }
+
+  function advanceFlybyTarget(rocket) {
+    const targets = (activeScenario && activeScenario.flybyTargets) || [];
+    if (!targets.length || flybyTargetIndex >= targets.length - 1) return;
+    const targetBody = bodies.find((b) => b.name === targets[flybyTargetIndex]);
+    if (!targetBody) return;
+    const dist = distance(rocket.position, targetBody.position);
+    if (dist < flybyTargetMinDist) flybyTargetMinDist = dist;
+    if (flybyTargetMinDist < targetBody.radius * 200 && dist > flybyTargetMinDist * 2) {
+      flybyTargetIndex++;
+      flybyTargetMinDist = Infinity;
+    }
+  }
+
   function updateReadouts() {
     timeReadout.textContent = `${(elapsedSeconds / constants.YEAR).toFixed(2)} years`;
 
     const rocket = bodies.find((body) => body.name === "Rocket");
-    const jupiter = bodies.find((body) => body.name === "Jupiter");
 
     if (!rocket) {
       rocketSpeedReadout.textContent = "not launched";
-      jupiterDistanceReadout.textContent = "not launched";
+      if (rocketSpeedLabel) rocketSpeedLabel.textContent = "Speed";
+      if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
+      if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
+      if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
       if (compactRocketSpeedReadout) {
         compactRocketSpeedReadout.textContent = "not launched";
       }
@@ -1196,17 +1260,38 @@
       return;
     }
 
+    advanceFlybyTarget(rocket);
+
+    const refBody = speedRefBody(rocket);
+    const spd = speedRelativeTo(rocket, refBody);
+    const refName = refBody ? refBody.name : "inertial";
+    if (rocketSpeedLabel) rocketSpeedLabel.textContent = `Speed (from ${refName})`;
+
     const missionStatus = rocketSim && rocketSim.missionStatus(rocketMissionState, bodies);
     const fuelText = missionStatus
       ? `, fuel ${(missionStatus.fuelMass / 1000).toFixed(1)} t`
       : "";
-    rocketSpeedReadout.textContent = `${(speed(rocket) / 1000).toFixed(2)} km/s${fuelText}`;
+    rocketSpeedReadout.textContent = `${(spd / 1000).toFixed(2)} km/s${fuelText}`;
     if (compactRocketSpeedReadout) {
-      compactRocketSpeedReadout.textContent = `${(speed(rocket) / 1000).toFixed(2)} km/s`;
+      compactRocketSpeedReadout.textContent = `${(spd / 1000).toFixed(2)} km/s`;
     }
-    jupiterDistanceReadout.textContent = jupiter
-      ? `${(distance(rocket.position, jupiter.position) / 1e9).toFixed(2)} Gm`
-      : "no Jupiter";
+
+    const flybyTargetName = getCurrentFlybyTargetName();
+    const flybyTargetBody = flybyTargetName ? bodies.find((b) => b.name === flybyTargetName) : null;
+    if (flybyTargetBody) {
+      const dist = distance(rocket.position, flybyTargetBody.position);
+      if (targetDistanceLabel) targetDistanceLabel.textContent = `→ ${flybyTargetName}`;
+      if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
+      const cs = closingSpeed(rocket, flybyTargetBody);
+      if (speedToTargetReadout) {
+        const sign = cs >= 0 ? "+" : "";
+        speedToTargetReadout.textContent = `${sign}${(cs / 1000).toFixed(2)} km/s`;
+      }
+    } else {
+      if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
+      if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
+      if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
+    }
 
     updateMissionReadouts(missionStatus);
   }
@@ -1222,8 +1307,6 @@
       nextBurnReadout.textContent = "n/a";
       throttleReadout.textContent = "n/a";
       fuelReadout.textContent = "n/a";
-      rocketMassReadout.textContent = "n/a";
-      massFlowReadout.textContent = "n/a";
       orbitInclinationReadout.textContent = "n/a";
       return;
     }
@@ -1237,8 +1320,6 @@
       nextBurnReadout.textContent = firstBurnText(mission);
       throttleReadout.textContent = "0%";
       fuelReadout.textContent = `${(mission.vehicle.fuelMassKg / 1000).toFixed(1)} t`;
-      rocketMassReadout.textContent = `${((mission.vehicle.dryMassKg + mission.vehicle.fuelMassKg) / 1000).toFixed(1)} t`;
-      massFlowReadout.textContent = `0 / ${mission.vehicle.maxMassFlowKgPerSec.toFixed(0)} kg/s`;
       orbitInclinationReadout.textContent = `target ${(mission.targetOrbit || {}).inclinationDeg || "?"} deg`;
       return;
     }
@@ -1253,8 +1334,6 @@
       : "none";
     throttleReadout.textContent = `${(missionStatus.throttle * 100).toFixed(0)}%`;
     fuelReadout.textContent = `${(missionStatus.fuelMass / 1000).toFixed(1)} t (${missionStatus.fuelPercent.toFixed(0)}%)`;
-    rocketMassReadout.textContent = `${(missionStatus.totalMass / 1000).toFixed(1)} t`;
-    massFlowReadout.textContent = `${missionStatus.massFlowKgPerSec.toFixed(0)} / ${missionStatus.maxMassFlowKgPerSec.toFixed(0)} kg/s`;
     orbitInclinationReadout.textContent = Number.isFinite(missionStatus.inclinationDeg)
       ? `${missionStatus.inclinationDeg.toFixed(1)} deg`
       : `target ${missionStatus.targetInclinationDeg || "?"} deg`;

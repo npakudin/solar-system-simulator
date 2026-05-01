@@ -11,7 +11,6 @@
       <aside class="panel panel-expanded" aria-label="Simulation controls">
         <div class="title">
           <span>Solar System 3D</span>
-          <strong>Gravity assist</strong>
         </div>
 
         <div class="panel-primary">
@@ -93,12 +92,16 @@
                 <dd id="time-readout">0.00 years</dd>
               </div>
               <div>
-                <dt>Rocket speed</dt>
+                <dt id="rocket-speed-label" title="Speed relative to the nearest dominant body (Earth near launch, Sun in interplanetary space)">Speed</dt>
                 <dd id="rocket-speed">not launched</dd>
               </div>
               <div>
-                <dt>Jupiter distance</dt>
-                <dd id="jupiter-distance">not launched</dd>
+                <dt id="target-distance-label">Target</dt>
+                <dd id="target-distance">—</dd>
+              </div>
+              <div>
+                <dt id="speed-to-target-label">Speed to target</dt>
+                <dd id="speed-to-target">—</dd>
               </div>
               <div>
                 <dt>Mission time</dt>
@@ -119,14 +122,6 @@
               <div>
                 <dt>Fuel</dt>
                 <dd id="fuel-readout">n/a</dd>
-              </div>
-              <div>
-                <dt>Rocket mass</dt>
-                <dd id="rocket-mass-readout">n/a</dd>
-              </div>
-              <div>
-                <dt>Mass flow</dt>
-                <dd id="mass-flow-readout">n/a</dd>
               </div>
               <div>
                 <dt>Inclination</dt>

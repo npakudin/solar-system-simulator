@@ -175,6 +175,7 @@
       id: "jupiter-gravity-assist-handcrafted",
       label: "Jupiter assist tuned",
       description: "Current hand-tuned Sun/Earth/Jupiter setup. Keeps the visible gravity-assist flight intact.",
+      flybyTargets: ["Jupiter"],
       initialState: {
         type: "circular",
         stopMassCenter: true,
@@ -204,6 +205,7 @@
       id: "real-2026-05-01-full",
       label: "Real 2026-05-01 full",
       description: "NASA/JPL Horizons state vectors for Sun, planets, and Moon at 2026-05-01 00:00 TDB.",
+      flybyTargets: ["Jupiter"],
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
@@ -227,6 +229,7 @@
       id: "real-2026-05-01-sun-earth-jupiter",
       label: "Real Sun-Earth-Jupiter",
       description: "Real 2026-05-01 positions, filtered to Sun, Earth, Moon, Jupiter, and rocket launch.",
+      flybyTargets: ["Jupiter"],
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
@@ -251,6 +254,7 @@
       id: "toy-earth-rocket",
       label: "Toy Earth + rocket",
       description: "Earth-centered sandbox for launch experiments without solar gravity.",
+      flybyTargets: ["ISS"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -276,6 +280,7 @@
       id: "toy-earth-moon-rocket",
       label: "Toy Earth-Moon + rocket",
       description: "Earth-centered Moon sandbox with a circular Moon approximation.",
+      flybyTargets: ["Moon"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -303,6 +308,7 @@
       id: "soyuz-iss-baikonur",
       label: "Soyuz → ISS (Baikonur)",
       description: "Full 7-maneuver Soyuz scheme for docking with ISS",
+      flybyTargets: ["ISS"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -320,6 +326,7 @@
       id: "crew-dragon-iss-ksc",
       label: "Crew Dragon → ISS (KSC)",
       description: "Full Crew Dragon scheme for docking with ISS",
+      flybyTargets: ["ISS"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -337,6 +344,7 @@
       id: "lunar-orbit-mission",
       label: "Lunar orbit insertion",
       description: "Transfer to the Moon and lunar orbit insertion.",
+      flybyTargets: ["Moon"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -353,6 +361,7 @@
       id: "artemis-2-free-return",
       label: "Artemis II — Moon flyby (2026)",
       description: "Lunar flyby on the Artemis II free-return trajectory.",
+      flybyTargets: ["Moon"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -369,6 +378,7 @@
       id: "lunar-landing-mission",
       label: "Lunar landing",
       description: "Full lunar landing scheme: TLI, LOI, DOI, and PDI.",
+      flybyTargets: ["Moon"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -400,6 +410,7 @@
       id: "apollo-11",
       label: "Apollo 11 — lunar landing (1969)",
       description: "Full Apollo 11 mission: TLI, LOI, DOI, PDI, ascent, and TEI.",
+      flybyTargets: ["Moon"],
       initialState: {
         type: "absolute",
         bodies: [
@@ -416,6 +427,7 @@
       id: "jupiter-earth-return",
       label: "Jupiter gravity assist → return to Earth",
       description: "Launch to Jupiter, gravity assist maneuver, and return to Earth.",
+      flybyTargets: ["Jupiter", "Earth"],
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
@@ -440,6 +452,7 @@
       id: "voyager-2-grand-tour",
       label: "Voyager 2 — grand tour (1977)",
       description: "Grand tour of the outer planets: Jupiter, Saturn, Uranus, Neptune.",
+      flybyTargets: ["Jupiter", "Saturn", "Uranus", "Neptune"],
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },

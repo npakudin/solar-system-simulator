@@ -171,7 +171,7 @@
       label: "Soyuz → ISS 420km",
       scenarioIds: ["soyuz-iss-baikonur"],
       targetOrbit: { name: "ISS 420km", inclinationDeg: 51.6 },
-      vehicle: { ...baseVehicle, dryMassKg: 7000, fuelMassKg: 280000, exhaustVelocityMps: 3300, maxMassFlowKgPerSec: 700 },
+      vehicle: { ...baseVehicle },
       programTemplate: "soyuz-iss",
       headingDeg: 63.33,
       defaultLaunchSiteId: "baikonur",
@@ -402,21 +402,26 @@
     }
 
     if (profile.programTemplate === "soyuz-iss" || profile.programTemplate === "crew-dragon-iss") {
+      // Ascent: same gravity-turn timing as leo (proven to work with baseVehicle).
+      // After 200 km parking orbit, Hohmann transfer to 420 km ISS orbit (~8 600 s half-period).
+      // Rendezvous timing below is calibrated for the soyuz-iss-baikonur scenario
+      // (ISS starts at 0° ahead of the launch meridian).  Burn timing may need tuning
+      // once the phasing orbit period is measured.
       return [
         { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
-        { name: "gravity turn: engine 28-280s", start: 28, end: 280, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+        { name: "gravity turn: engine 28-250s", start: 28, end: 250, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
           { t: 28, pitchDeg: 88 },
           { t: 80, pitchDeg: 72 },
           { t: 150, pitchDeg: 38 },
-          { t: 280, pitchDeg: 4 }
+          { t: 250, pitchDeg: 4 }
         ] } },
-        { name: "coast to MECO", start: 280, end: 460, throttle: 0, attitude: { mode: "prograde" } },
-        { name: "circularize 200km: engine 460-530s", start: 460, end: 530, throttle: 0.18, attitude: { mode: "prograde" } },
-        { name: "Hohmann 1 — raise apogee to 420km: engine 530-560s", start: 530, end: 560, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "coast to apogee", start: 560, end: 3277, throttle: 0, attitude: { mode: "prograde" } },
-        { name: "Hohmann 2 — circularize 420km: engine 3277-3307s", start: 3277, end: 3307, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "correction 2 — phase adjust: engine 3310-3330s", start: 3310, end: 3330, throttle: 0.015, attitude: { mode: "prograde" } },
-        { name: "coast to ISS rendezvous", start: 3330, end: 21600, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
+        { name: "coast to circularization", start: 250, end: 520, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize 200km: engine 520-590s", start: 520, end: 590, throttle: 0.18, attitude: { mode: "prograde" } },
+        { name: "Hohmann 1 — raise apogee to 420km: engine 590-620s", start: 590, end: 620, throttle: 0.05, attitude: { mode: "prograde" } },
+        { name: "coast to 420km apogee", start: 620, end: 9220, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "Hohmann 2 — circularize 420km: engine 9220-9250s", start: 9220, end: 9250, throttle: 0.05, attitude: { mode: "prograde" } },
+        { name: "phase correction: engine 9260-9280s", start: 9260, end: 9280, throttle: 0.015, attitude: { mode: "prograde" } },
+        { name: "coast to ISS rendezvous", start: 9280, end: 86400, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
       ];
     }
 
