@@ -1,80 +1,135 @@
 /**
- * Diagnostic trace — logs altitude, speed, and fuel at each mission milestone.
- * Run with:  npx jest soyuz-iss-diagnostic --no-coverage --verbose
- *
- * Purpose: understand what the rocket is actually doing so the mission
- * program can be tuned.
+ * Event-driven diagnostic trace for Soyuz → ISS mission.
+ * Run with:  npx jest soyuz-iss-diagnostic --no-coverage
  */
 
-const { setupMission, runTo, relativeSpeed } = require('./harness');
+const { loadSimulator, relativeSpeed } = require('./harness');
 
-const SCENARIO = 'soyuz-iss-baikonur';
-const SITE     = 'baikonur';
-const PROFILE  = 'soyuz-iss';
-const GM       = 6.67408e-11 * 5.972e24;
+const SCENARIO     = 'soyuz-iss-baikonur';
+const SITE         = 'baikonur';
+const PROFILE      = 'soyuz-iss';
+const GM           = 6.67408e-11 * 5.972e24;
+const END_TIME     = 6*3600;
+const STEP_REQUEST = 0.01;
+const HEARTBEAT_S  = 1000;
 
-function snapshot(label, bodies, missionState, sim) {
+function radialVelocity(body, anchor) {
+  const dx = body.position.x - anchor.position.x;
+  const dy = body.position.y - anchor.position.y;
+  const dz = body.position.z - anchor.position.z;
+  const r  = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if (r === 0) return 0;
+  const dvx = body.velocity.x - anchor.velocity.x;
+  const dvy = body.velocity.y - anchor.velocity.y;
+  const dvz = body.velocity.z - anchor.velocity.z;
+  return (dvx*dx + dvy*dy + dvz*dz) / r;
+}
+
+const HDR =
+  'E      t(s)       alt(km) v_tan  v_rad v/circ fuel(kg)  ISS(km) relV(m/s) incl  event';
+
+function buildLine(tag, bodies, ms, sim) {
   const earth  = bodies.find(b => b.name === 'Earth');
   const rocket = bodies.find(b => b.name === 'Rocket');
   const iss    = bodies.find(b => b.name === 'ISS');
 
-  const r   = sim.SolarPhysics.distance(rocket.position, earth.position);
-  const alt = (r - earth.radius) / 1000; // km
-  const v   = sim.SolarPhysics.speed(rocket);
-  const circV = Math.sqrt(GM / r);
-  const fuelPct = (rocket.fuelMass / missionState.mission.vehicle.fuelMassKg * 100).toFixed(1);
-  const dist2iss = sim.SolarPhysics.distance(rocket.position, iss.position) / 1000;
-  const relV = relativeSpeed(rocket, iss);
-  const status = sim.RocketSim.missionStatus(missionState, bodies);
+  const r_e    = sim.SolarPhysics.distance(rocket.position, earth.position);
+  const alt    = (r_e - earth.radius) / 1000;
+  const v_abs  = sim.SolarPhysics.speed(rocket);
+  const v_circ = Math.sqrt(GM / r_e);
+  const v_rad  = radialVelocity(rocket, earth);
+  const v_tan  = Math.sqrt(Math.max(0, v_abs*v_abs - v_rad*v_rad));
 
-  console.log(
-    `t=${String(Math.round(missionState.missionTime)).padStart(6)} s` +
-    `  alt=${String(alt.toFixed(0)).padStart(7)} km` +
-    `  v=${String(v.toFixed(0)).padStart(5)} m/s` +
-    `  v/circ=${(v/circV).toFixed(3)}` +
-    `  fuel=${fuelPct}%` +
-    `  dist_ISS=${dist2iss.toFixed(0)} km` +
-    `  relV=${relV.toFixed(0)} m/s` +
-    `  | ${label}`
+  const r_iss  = sim.SolarPhysics.distance(rocket.position, iss.position) / 1000;
+  const rv_iss = relativeSpeed(rocket, iss);
+
+  const fuel_kg  = rocket.fuelMass;
+  const status   = sim.RocketSim.missionStatus(ms, bodies);
+  const incl     = (status.inclinationDeg || 0).toFixed(1);
+  const eng      = rocket.engineOn ? 'E' : ' ';
+
+  const t = ms.missionTime.toFixed(3);
+  return (
+    `${eng}` +
+    `  ${String(t).padStart(10)}` +
+    `  ${String(alt.toFixed(6)).padStart(10)}` +
+    `  ${String(v_tan.toFixed(0)).padStart(5)}` +
+    `  ${String(v_rad.toFixed(0)).padStart(5)}` +
+    `  ${(v_abs/v_circ).toFixed(6)}` +
+    `  ${String(fuel_kg.toFixed(0)).padStart(8)}` +
+    `  ${String(r_iss.toFixed(6)).padStart(7)}` +
+    `  ${String(rv_iss.toFixed(6)).padStart(8)}` +
+    `  ${incl.padStart(4)}°` +
+    `  ${tag}`
   );
 }
 
-test('mission trace — key milestones', () => {
-  const state = setupMission(SCENARIO, SITE, PROFILE);
-  const { sim, bodies, missionState } = state;
+test('mission trace — event-driven', () => {
+  const sim    = loadSimulator();
+  const bodies = sim.SolarPhysics.createInitialBodies(SCENARIO);
+  const mission = sim.RocketSim.missionForScenario(SCENARIO, SITE, PROFILE);
+  const ms     = sim.RocketSim.createMissionState(mission, bodies);
 
-  const milestones = [
-    { t: 28,    label: 'end vertical climb' },
-    { t: 250,   label: 'end gravity turn (engine cut)' },
-    { t: 520,   label: 'start circularize' },
-    { t: 590,   label: 'end circularize / start Hohmann-1' },
-    { t: 620,   label: 'end Hohmann-1 apogee raise' },
-    { t: 2000,  label: 'coasting to 420 km apogee' },
-    { t: 5000,  label: 'coasting to 420 km apogee (2)' },
-    { t: 9220,  label: 'start Hohmann-2 circularize 420 km' },
-    { t: 9250,  label: 'end Hohmann-2' },
-    { t: 9280,  label: 'end phase correction — begin coast to ISS' },
-    { t: 18000, label: '5 h mark' },
-    { t: 36000, label: '10 h mark' },
-    { t: 54000, label: '15 h mark' },
-    { t: 86400, label: '24 h mark — end of program' },
-  ];
+  const earth  = bodies.find(b => b.name === 'Earth');
+  const rocket = bodies.find(b => b.name === 'Rocket');
 
-  console.log('\n  Mission trace for Soyuz → ISS:');
-  console.log('  ' + '─'.repeat(110));
+  let prevEngineOn = false;
+  let prevVRad     = 0;
+  let lastHeartbeat = 0;
 
-  for (const m of milestones) {
-    const { crashed, crashTime } = runTo(m.t, sim, bodies, missionState);
-    if (crashed) {
-      console.log(`  *** CRASHED at t=${crashTime.toFixed(0)} s ***`);
+  const lines = [];
+  lines.push('Soyuz→ISS  E=engine on  v_rad>0=climbing  v_rad<0=falling  v/circ≈1=circular');
+  lines.push(HDR);
+  lines.push('─'.repeat(HDR.length));
+  lines.push(buildLine('init', bodies, ms, sim));
+
+  while (ms.missionTime < END_TIME) {
+    const remaining = END_TIME - ms.missionTime;
+    const dt = Math.min(
+      sim.RocketSim.chooseStepSeconds(ms, bodies, STEP_REQUEST),
+      remaining
+    );
+    //console.log(`dt: ${dt}`)
+
+    sim.RocketSim.updateRocketBeforePhysics(ms, bodies, dt, null);
+    sim.SolarPhysics.stepSimulation(bodies, dt);
+    sim.RocketSim.updateRocketAfterPhysics(ms, bodies, dt, null);
+
+    const r    = sim.SolarPhysics.distance(rocket.position, earth.position);
+    const alt  = (r - earth.radius) / 1000;
+    const vRad = radialVelocity(rocket, earth);
+    const engOn = rocket.engineOn;
+
+    if (r < earth.radius - 50000) {
+      lines.push(buildLine('*** CRASHED ***', bodies, ms, sim));
       break;
     }
-    snapshot(m.label, bodies, missionState, sim);
-    prev = m.t;
+
+    let tag = null;
+    if (engOn && !prevEngineOn)           tag = 'engine ON';
+    if (!engOn && prevEngineOn)           tag = 'engine OFF';
+    if (prevVRad > 0 && vRad < 0)        tag = 'APOGEE';
+    if (prevVRad < 0 && vRad > 0 && alt > 10) tag = 'PERIGEE';
+    if (!tag && ms.missionTime - lastHeartbeat >= HEARTBEAT_S) tag = 'heartbeat';
+
+    if (tag) {
+      lines.push(buildLine(tag, bodies, ms, sim));
+      if (!engOn && prevEngineOn) {
+        const rk = bodies.find(b => b.name === 'Rocket');
+        lines.push(`  POS  [${rk.position.x.toFixed(0)}, ${rk.position.y.toFixed(0)}, ${rk.position.z.toFixed(0)}]`);
+        lines.push(`  VEL  [${rk.velocity.x.toFixed(3)}, ${rk.velocity.y.toFixed(3)}, ${rk.velocity.z.toFixed(3)}]`);
+      }
+      lastHeartbeat = ms.missionTime;
+    }
+
+    prevEngineOn = engOn;
+    prevVRad     = vRad;
   }
 
-  console.log('  ' + '─'.repeat(110));
+  if (ms.missionTime >= END_TIME) {
+    lines.push(buildLine('end of program', bodies, ms, sim));
+  }
 
-  // Always pass — this is a diagnostic, not a correctness test
+  console.log('\n' + lines.join('\n'));
   expect(true).toBe(true);
 });

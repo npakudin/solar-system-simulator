@@ -207,8 +207,12 @@
       dt = Math.min(dt, nextEvent);
     }
 
-    const nextBurn = secondsToNextBurn(mission, state.missionTime);
-    if (nextBurn <= (timestep.preBurnLookaheadSeconds || 30)) {
+    const proximity = Math.min(nextEvent, secondsSinceLastEvent(mission, state.missionTime));
+    if (proximity <= 2) {
+      dt = Math.min(dt, timestep.nearEventSeconds || 0.05);
+    } else if (proximity <= 10) {
+      dt = Math.min(dt, timestep.preEventSeconds || 0.5);
+    } else if (proximity <= (timestep.preBurnLookaheadSeconds || 30)) {
       dt = Math.min(dt, timestep.preBurnSeconds || 1);
     }
 
@@ -225,7 +229,11 @@
 
     dt = Math.min(dt, chooseProximityStepSeconds(mission, bodies, rocket, timestep, dt));
 
-    return Math.max(0.05, dt);
+    if (rocket.engineOn) {
+      dt = Math.min(dt, 0.001)
+    }
+
+    return Math.max(0.001, dt);
   }
 
   function chooseProximityStepSeconds(mission, bodies, rocket, timestep, currentDt) {
@@ -319,15 +327,23 @@
     return Number.isFinite(best) ? best : Infinity;
   }
 
-  function secondsToNextBurn(mission, missionTime) {
+  function secondsSinceLastEvent(mission, missionTime) {
     let best = Infinity;
 
     for (const burn of mission.program || []) {
-      if ((burn.throttle || 0) <= 0) {
-        continue;
+      for (const time of [burn.start, burn.end]) {
+        if (time <= missionTime) {
+          best = Math.min(best, missionTime - time);
+        }
       }
-      if (burn.start >= missionTime) {
-        best = Math.min(best, burn.start - missionTime);
+
+      const points = burn.attitude && burn.attitude.points;
+      if (points) {
+        for (const point of points) {
+          if (point.t <= missionTime) {
+            best = Math.min(best, missionTime - point.t);
+          }
+        }
       }
     }
 
@@ -514,6 +530,20 @@
     if (attitude.mode === "pitch-program") {
       const spinAxis = (state.mission.earth && state.mission.earth.northPole) || { x: 0, y: 0, z: 1 };
       return pitchDirection(up, attitude.headingDeg || 90, pitchAt(attitude, state.missionTime), spinAxis);
+    }
+
+    if (attitude.mode === "rtn") {
+      // RTN (LVLH): R=radial-out, T=tangential(prograde), N=normal(out of plane)
+      const relVel = subtract(rocket.velocity, earth.velocity);
+      const T = normalizeOrFallback(relVel, { x: 0, y: 1, z: 0 });
+      const N = normalizeOrFallback(cross(up, T), { x: 0, y: 0, z: 1 });
+      const r = attitude.r || 0;
+      const t = attitude.t || 0;
+      const n = attitude.n || 0;
+      return normalizeOrFallback(
+        add(add(multiply(up, r), multiply(T, t)), multiply(N, n)),
+        up
+      );
     }
 
     return up;

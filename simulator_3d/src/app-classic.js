@@ -450,6 +450,10 @@
         const rocketBody = bodies.find((b) => b.name === 'Rocket');
         if (rocketBody && !(rocketMissionState && rocketMissionState.attachedToPad)) {
           checkLandings(bodies, rocketBody, null);
+          if (rocketBody._landed) {
+            running = false;
+            break;
+          }
         }
         rocketSim && rocketSim.updateRocketAfterPhysics(
           rocketMissionState,
@@ -1250,12 +1254,22 @@
     if (!rocket) {
       rocketSpeedReadout.textContent = "not launched";
       if (rocketSpeedLabel) rocketSpeedLabel.textContent = "Speed";
-      if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
-      if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
-      if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
       if (compactRocketSpeedReadout) {
         compactRocketSpeedReadout.textContent = "not launched";
       }
+      const flybyTargetName = getCurrentFlybyTargetName();
+      const flybyTargetBody = flybyTargetName ? bodies.find((b) => b.name === flybyTargetName) : null;
+      const earth = bodies.find((b) => b.name === "Earth");
+      const origin = earth || bodies[0];
+      if (flybyTargetBody && origin && flybyTargetBody !== origin) {
+        const dist = distance(origin.position, flybyTargetBody.position);
+        if (targetDistanceLabel) targetDistanceLabel.textContent = `→ ${flybyTargetName}`;
+        if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
+      } else {
+        if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
+        if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
+      }
+      if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
       updateMissionReadouts(null);
       return;
     }

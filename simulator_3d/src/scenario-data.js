@@ -314,7 +314,8 @@
         bodies: [
           { name: "Earth", position: [0, 0, 0], velocity: [0, 0, 0] },
           { name: "Moon", position: [384400000, 0, 0], velocity: [0, 1022, 0] },
-          { name: "ISS", position: [6791000, 0, 0], velocity: [0, 7661, 0] }
+          // ISS at 408 km, 51.6° inclined orbit (same plane as Soyuz), ~100 km ahead at t≈3215
+          { name: "ISS", position: [2837000, 4119000, 4578000], velocity: [-6919, 1480, 2956] }
         ]
       },
       stepSeconds: 2,

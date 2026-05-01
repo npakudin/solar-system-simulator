@@ -171,7 +171,7 @@
       label: "Soyuz → ISS 420km",
       scenarioIds: ["soyuz-iss-baikonur"],
       targetOrbit: { name: "ISS 420km", inclinationDeg: 51.6 },
-      vehicle: { ...baseVehicle },
+      vehicle: { ...baseVehicle, dryMassKg: 7000, fuelMassKg: 180000, maxMassFlowKgPerSec: 900 },
       programTemplate: "soyuz-iss",
       headingDeg: 63.33,
       defaultLaunchSiteId: "baikonur",
@@ -402,26 +402,26 @@
     }
 
     if (profile.programTemplate === "soyuz-iss" || profile.programTemplate === "crew-dragon-iss") {
-      // Ascent: same gravity-turn timing as leo (proven to work with baseVehicle).
-      // After 200 km parking orbit, Hohmann transfer to 420 km ISS orbit (~8 600 s half-period).
-      // Rendezvous timing below is calibrated for the soyuz-iss-baikonur scenario
-      // (ISS starts at 0° ahead of the launch meridian).  Burn timing may need tuning
-      // once the phasing orbit period is measured.
+      // Vehicle: dryMass=7000 kg, fuel=180000 kg, massFlow=900 kg/s → T/W ≈ 1.67 at liftoff.
+      // Phase 1: gravity turn (12-170s) pitches to horizontal, building most of orbital speed.
+      // Phase 2: immediate injection burn (170-195s) prograde at full throttle to reach
+      //   perigee speed for 420 km Hohmann apogee (~7960 m/s tangential at ~100km).
+      // Phase 3: coast 2680s to 420km apogee, then circularize (tiny ΔV ~100 m/s).
+      // Phase 4: coast toward ISS; rendezvous and correction burns follow.
       return [
-        { name: "vertical climb: engine 0-28s", start: 0, end: 28, throttle: 1, attitude: { mode: "surface-up" } },
-        { name: "gravity turn: engine 28-250s", start: 28, end: 250, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
-          { t: 28, pitchDeg: 88 },
-          { t: 80, pitchDeg: 72 },
-          { t: 150, pitchDeg: 38 },
-          { t: 250, pitchDeg: 4 }
+        { name: "vertical climb: engine 0-12s", start: 0, end: 12, throttle: 1, attitude: { mode: "surface-up" } },
+        { name: "gravity turn: engine 12-170s", start: 12, end: 170, throttle: 1, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 12,  pitchDeg: 87 },
+          { t: 40,  pitchDeg: 70 },
+          { t: 80,  pitchDeg: 42 },
+          { t: 130, pitchDeg: 13 },
+          { t: 170, pitchDeg: 0  }
         ] } },
-        { name: "coast to circularization", start: 250, end: 520, throttle: 0, attitude: { mode: "prograde" } },
-        { name: "circularize 200km: engine 520-590s", start: 520, end: 590, throttle: 0.18, attitude: { mode: "prograde" } },
-        { name: "Hohmann 1 — raise apogee to 420km: engine 590-620s", start: 590, end: 620, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "coast to 420km apogee", start: 620, end: 9220, throttle: 0, attitude: { mode: "prograde" } },
-        { name: "Hohmann 2 — circularize 420km: engine 9220-9250s", start: 9220, end: 9250, throttle: 0.05, attitude: { mode: "prograde" } },
-        { name: "phase correction: engine 9260-9280s", start: 9260, end: 9280, throttle: 0.015, attitude: { mode: "prograde" } },
-        { name: "coast to ISS rendezvous", start: 9280, end: 86400, throttle: 0, attitude: { mode: "target-body", target: "ISS", leadSeconds: 0 } }
+        { name: "coast to natural apogee (~175km)", start: 170, end: 315, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "injection at apogee: raise to 408km", start: 315, end: 338, throttle: 0.9834, attitude: { mode: "prograde" } },
+        { name: "coast to 408km apogee", start: 338, end: 3194, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "circularize at 408km apogee: raise perigee", start: 3194, end: 3215, throttle: 0.0148, attitude: { mode: "prograde" } },
+        { name: "coast in orbit", start: 3194, end: 6*3600, throttle: 0, attitude: { mode: "prograde" } },
       ];
     }
 

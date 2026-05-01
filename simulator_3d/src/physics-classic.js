@@ -2,7 +2,7 @@
   const G = 6.67408e-11;
   const DAY = 24 * 60 * 60;
   const YEAR = 365.25 * DAY;
-  const SOFTENING = 1.0e7;
+  const SOFTENING = 1.0e5;
   const KM_TO_M = 1000;
 
   const scenarioData = window.SolarScenarioData || {
