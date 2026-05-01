@@ -61,6 +61,7 @@
   let rocketMissionState = null;
   let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
   let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
+  const cameraFollowOffset = new THREE.Vector3();
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#03050a");
@@ -87,6 +88,7 @@
 
 
   let proceduralStars = createStars();
+  let skySphere = null;
   scene.add(proceduralStars);
 
   const bodyMeshes = new Map();
@@ -146,9 +148,12 @@
     scene.remove(proceduralStars);
     proceduralStars = null;
     const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(1400, 32, 16),
-      new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+      new THREE.SphereGeometry(1500, 32, 16),
+      new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false })
     );
+    sky.frustumCulled = false;
+    sky.renderOrder = -1000;
+    skySphere = sky;
     scene.add(sky);
   });
 
@@ -310,6 +315,7 @@
     updateMeshes();
     updateCameraTarget(deltaMs / 1000);
     controls.update();
+    updateSkyPosition();
     updateReadouts();
     renderer.render(scene, camera);
   }
@@ -789,10 +795,8 @@
     shadow.visible = true;
     const sunDirection = toScenePosition(sun.position).sub(toScenePosition(saturn.position)).normalize();
     const axialInverse = mesh.userData.axialGroup.quaternion.clone().invert();
-    shadow.rotation.y = Math.atan2(
-      sunDirection.applyQuaternion(axialInverse).z,
-      -sunDirection.x
-    );
+    const localSun = sunDirection.applyQuaternion(axialInverse);
+    shadow.rotation.y = Math.atan2(localSun.z, -localSun.x);
   }
 
   function appendTrailSamples() {
@@ -861,7 +865,18 @@
     }
 
     const target = toScenePosition(body.position);
+    cameraFollowOffset.copy(camera.position).sub(controls.target);
     controls.target.lerp(target, Math.min(1, deltaSeconds * 3));
+    camera.position.copy(controls.target).add(cameraFollowOffset);
+  }
+
+  function updateSkyPosition() {
+    if (proceduralStars) {
+      proceduralStars.position.copy(camera.position);
+    }
+    if (skySphere) {
+      skySphere.position.copy(camera.position);
+    }
   }
 
   function updateReadouts() {

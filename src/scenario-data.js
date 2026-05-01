@@ -202,10 +202,7 @@
         radialDeltaV: -0.3e3,
         outOfPlaneDeltaV: 0
       },
-      referenceOrbits: [
-        { radius: 1.496e11, color: "#203f76", inclination: 0 },
-        { radius: 7.7857e11, color: "#5f4631", inclination: 1.304 }
-      ],
+      referenceOrbits: [],
       stepSeconds: 3600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
@@ -229,10 +226,7 @@
         radialDeltaV: -0.3e3,
         outOfPlaneDeltaV: 0
       },
-      referenceOrbits: [
-        { radius: 1.496e11, color: "#203f76", inclination: 0 },
-        { radius: 7.7857e11, color: "#5f4631", inclination: 1.304 }
-      ],
+      referenceOrbits: [],
       stepSeconds: 3600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },

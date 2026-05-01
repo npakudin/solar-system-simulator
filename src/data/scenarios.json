@@ -233,18 +233,7 @@
         "radialDeltaV": -300,
         "outOfPlaneDeltaV": 0
       },
-      "referenceOrbits": [
-        {
-          "radius": 149600000000,
-          "color": "#203f76",
-          "inclination": 0
-        },
-        {
-          "radius": 778570000000,
-          "color": "#5f4631",
-          "inclination": 1.304
-        }
-      ],
+      "referenceOrbits": [],
       "stepSeconds": 3600,
       "view": {
         "metersToUnits": 1e-10,
@@ -427,18 +416,7 @@
         "radialDeltaV": -300,
         "outOfPlaneDeltaV": 0
       },
-      "referenceOrbits": [
-        {
-          "radius": 149600000000,
-          "color": "#203f76",
-          "inclination": 0
-        },
-        {
-          "radius": 778570000000,
-          "color": "#5f4631",
-          "inclination": 1.304
-        }
-      ],
+      "referenceOrbits": [],
       "stepSeconds": 3600,
       "view": {
         "metersToUnits": 1e-10,
