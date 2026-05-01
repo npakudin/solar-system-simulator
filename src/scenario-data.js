@@ -4,61 +4,101 @@
       color: "#ffc247",
       mass: 1.989e30,
       radius: 6.9634e8,
-      displayScale: 12
+      displayScale: 12,
+      axialTiltDeg: 7.25,
+      rotationPeriodHours: 609.12,
+      texturePath: "sim-assets/textures/solar-system-scope/sun.jpg"
     },
     Mercury: {
       color: "#b7a79a",
       mass: 3.3011e23,
       radius: 2.4397e6,
-      displayScale: 1800
+      displayScale: 1800,
+      axialTiltDeg: 0.034,
+      rotationPeriodHours: 1407.6,
+      texturePath: "sim-assets/textures/solar-system-scope/mercury.jpg"
     },
     Venus: {
       color: "#d8c18a",
       mass: 4.8675e24,
       radius: 6.0518e6,
-      displayScale: 950
+      displayScale: 950,
+      axialTiltDeg: 177.36,
+      rotationPeriodHours: -5832.5,
+      texturePath: "sim-assets/textures/solar-system-scope/venus_surface.jpg"
     },
     Earth: {
       color: "#4f9cff",
       mass: 5.972e24,
       radius: 6.371e6,
-      displayScale: 900
+      displayScale: 900,
+      axialTiltDeg: 23.44,
+      rotationPeriodHours: 23.9344696,
+      texturePath: "sim-assets/textures/solar-system-scope/earth_daymap.jpg",
+      ellipsoid: {
+        equatorialRadiusM: 6378137,
+        polarRadiusM: 6356752.314245,
+        flattening: 1 / 298.257223563
+      }
     },
     Moon: {
       color: "#b8bcc7",
       mass: 7.347673092e22,
       radius: 1.7374e6,
-      displayScale: 1200
+      displayScale: 1200,
+      axialTiltDeg: 6.68,
+      rotationPeriodHours: 655.7,
+      texturePath: "sim-assets/textures/solar-system-scope/moon.jpg"
     },
     Mars: {
       color: "#c56d4f",
       mass: 6.4171e23,
       radius: 3.3895e6,
-      displayScale: 1300
+      displayScale: 1300,
+      axialTiltDeg: 25.19,
+      rotationPeriodHours: 24.6,
+      texturePath: "sim-assets/textures/solar-system-scope/mars.jpg"
     },
     Jupiter: {
       color: "#d8a35d",
       mass: 1.8986e27,
       radius: 6.9911e7,
-      displayScale: 200
+      displayScale: 200,
+      axialTiltDeg: 3.13,
+      rotationPeriodHours: 9.9,
+      texturePath: "sim-assets/textures/solar-system-scope/jupiter.jpg"
     },
     Saturn: {
       color: "#d7bd82",
       mass: 5.6834e26,
       radius: 5.8232e7,
-      displayScale: 200
+      displayScale: 200,
+      axialTiltDeg: 26.73,
+      rotationPeriodHours: 10.7,
+      texturePath: "sim-assets/textures/solar-system-scope/saturn.jpg",
+      rings: {
+        innerRadiusM: 6.69e7,
+        outerRadiusM: 1.39826e8,
+        texturePath: "sim-assets/textures/solar-system-scope/saturn_ring_alpha.png"
+      }
     },
     Uranus: {
       color: "#8fd3df",
       mass: 8.681e25,
       radius: 2.5362e7,
-      displayScale: 260
+      displayScale: 260,
+      axialTiltDeg: 97.77,
+      rotationPeriodHours: -17.2,
+      texturePath: "sim-assets/textures/solar-system-scope/uranus.jpg"
     },
     Neptune: {
       color: "#5c8dff",
       mass: 1.02413e26,
       radius: 2.4622e7,
-      displayScale: 260
+      displayScale: 260,
+      axialTiltDeg: 28.32,
+      rotationPeriodHours: 16.1,
+      texturePath: "sim-assets/textures/solar-system-scope/neptune.jpg"
     }
   };
 
@@ -246,13 +286,13 @@
       stepSeconds: 1,
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 10, 22], target: [0, 0, 0], maxDistance: 260 },
-      ui: { cameraTarget: "earth", timeScale: 1 }
+      ui: { cameraTarget: "earth", timeScale: 200 }
     }
   ];
 
   window.SolarScenarioData = {
     bodyCatalog,
-    defaultScenarioId: "jupiter-gravity-assist-handcrafted",
+    defaultScenarioId: "toy-earth-moon-rocket",
     scenarios
   };
 })();

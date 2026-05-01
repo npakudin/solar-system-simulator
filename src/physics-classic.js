@@ -12,7 +12,20 @@
   };
 
   class Body {
-    constructor({ name, color, mass, radius, position, velocity, displayScale = 1 }) {
+    constructor({
+      name,
+      color,
+      mass,
+      radius,
+      position,
+      velocity,
+      displayScale = 1,
+      axialTiltDeg = 0,
+      rotationPeriodHours = null,
+      texturePath = null,
+      ellipsoid = null,
+      rings = null
+    }) {
       this.name = name;
       this.color = color;
       this.mass = mass;
@@ -21,6 +34,11 @@
       this.velocity = { ...velocity };
       this.acceleration = { x: 0, y: 0, z: 0 };
       this.displayScale = displayScale;
+      this.axialTiltDeg = axialTiltDeg;
+      this.rotationPeriodHours = rotationPeriodHours;
+      this.texturePath = texturePath;
+      this.ellipsoid = ellipsoid;
+      this.rings = rings;
     }
   }
 
@@ -62,6 +80,11 @@
       mass: body.mass,
       radius: body.radius,
       displayScale: body.displayScale,
+      axialTiltDeg: body.axialTiltDeg,
+      rotationPeriodHours: body.rotationPeriodHours,
+      texturePath: body.texturePath,
+      ellipsoid: body.ellipsoid,
+      rings: body.rings,
       position: body.position,
       velocity: body.velocity
     });
@@ -169,7 +192,12 @@
       color: catalog.color,
       mass: catalog.mass,
       radius: catalog.radius,
-      displayScale: catalog.displayScale
+      displayScale: catalog.displayScale,
+      axialTiltDeg: catalog.axialTiltDeg || 0,
+      rotationPeriodHours: catalog.rotationPeriodHours || null,
+      texturePath: catalog.texturePath || null,
+      ellipsoid: catalog.ellipsoid || null,
+      rings: catalog.rings || null
     };
   }
 

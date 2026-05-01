@@ -120,6 +120,33 @@ input[type="range"] {
   accent-color: #75a7ff;
 }
 
+.field-range .range-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-range input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-range input[type="number"] {
+  width: 56px;
+  padding: 4px 6px;
+  border: 1px solid #2d384d;
+  border-radius: 6px;
+  background: #141b28;
+  color: #f4f7fb;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.field-range input[type="number"]::-webkit-inner-spin-button,
+.field-range input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+
 .check {
   display: flex;
   align-items: center;

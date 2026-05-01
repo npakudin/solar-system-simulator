@@ -18,6 +18,7 @@
   const resetButton = document.querySelector("#reset-sim");
   const cameraTargetSelect = document.querySelector("#camera-target");
   const timeScaleInput = document.querySelector("#time-scale");
+  const timeScaleNum = document.querySelector("#time-scale-num");
   const showTrailsInput = document.querySelector("#show-trails");
   const timeReadout = document.querySelector("#time-readout");
   const rocketSpeedReadout = document.querySelector("#rocket-speed");
@@ -81,15 +82,12 @@
   const ambient = new THREE.AmbientLight("#ffffff", 0.18);
   scene.add(ambient);
 
-  const sunLight = new THREE.PointLight("#fff1c4", 4, 0, 0);
+  const sunLight = new THREE.PointLight("#fff1c4", 1.5, 0, 0);
   scene.add(sunLight);
 
-  const grid = new THREE.GridHelper(220, 44, "#243040", "#101722");
-  grid.rotation.x = Math.PI / 2;
-  scene.add(grid);
 
-  const stars = createStars();
-  scene.add(stars);
+  let proceduralStars = createStars();
+  scene.add(proceduralStars);
 
   const bodyMeshes = new Map();
   const trails = new Map();
@@ -102,7 +100,75 @@
   scene.add(referenceOrbitGroup);
   if (pelletSystem) {
     scene.add(pelletSystem.points);
+    pelletSystem.points.visible = false;
   }
+
+  const textures = {};
+  let saturnRingTexture = null;
+  const textureLoader = new THREE.TextureLoader();
+
+  // Mirror horizontally for all spheres: physics Y → scene Z inverts east/west handedness.
+  function mirrorTex(tex) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.repeat.set(-1, 1);
+    tex.offset.set(1, 0);
+    tex.needsUpdate = true;
+  }
+
+  const BODY_TEXTURES = Object.fromEntries(
+    Object.entries(window.SolarScenarioData.bodyCatalog)
+      .filter(([, body]) => body.texturePath)
+      .map(([name, body]) => [name, body.texturePath])
+  );
+  const saturnCatalog = window.SolarScenarioData.bodyCatalog.Saturn || {};
+  const saturnRingTexturePath = saturnCatalog.rings && saturnCatalog.rings.texturePath;
+
+  for (const [name, path] of Object.entries(BODY_TEXTURES)) {
+    textureLoader.load(path, (tex) => {
+      mirrorTex(tex);
+      textures[name] = tex;
+      const mesh = bodyMeshes.get(name);
+      if (mesh) applyBodyTexture(mesh, name, tex);
+    }, undefined, () => console.warn(`Texture ${name} skipped`));
+  }
+
+  if (saturnRingTexturePath) {
+    textureLoader.load(saturnRingTexturePath, (tex) => {
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      saturnRingTexture = tex;
+      const mesh = bodyMeshes.get("Saturn");
+      if (mesh) applySaturnRingTexture(mesh, tex);
+    }, undefined, () => console.warn('Saturn ring texture skipped'));
+  }
+
+  // Star background: replace procedural points with milky-way texture sphere.
+  textureLoader.load('sim-assets/textures/solar-system-scope/stars_milky_way.jpg', (tex) => {
+    scene.remove(proceduralStars);
+    proceduralStars = null;
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(1400, 32, 16),
+      new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+    );
+    scene.add(sky);
+  });
+
+  const launchSiteMarkers = [];
+  fetch('src/data/launch-sites.json')
+    .then(r => r.json())
+    .then(sites => {
+      for (const site of sites) {
+        site.latRad = site.latDeg * Math.PI / 180;
+        site.lonRad = site.lonDeg * Math.PI / 180;
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 8, 6),
+          new THREE.MeshBasicMaterial({ color: '#ff6600' })
+        );
+        dot.visible = false;
+        scene.add(dot);
+        launchSiteMarkers.push({ site, dot });
+      }
+    })
+    .catch(() => console.warn('launch-sites.json failed'));
 
   populateScenarioSelect();
   populateLaunchSiteSelect();
@@ -143,6 +209,7 @@
         rocketMissionState = rocketSim.createMissionState(mission, bodies);
         if (pelletSystem) {
           rocketSim.resetPelletSystem(pelletSystem);
+          pelletSystem.points.visible = true;
         }
       }
     } else {
@@ -164,6 +231,35 @@
   showTrailsInput.addEventListener("change", () => {
     for (const trail of trails.values()) {
       trail.line.visible = showTrailsInput.checked;
+    }
+  });
+
+  timeScaleInput.addEventListener("input", () => {
+    timeScaleNum.value = timeScaleInput.value;
+  });
+
+  timeScaleNum.addEventListener("blur", () => {
+    const raw = Number(timeScaleNum.value);
+    const min = Number(timeScaleInput.min);
+    const max = Number(timeScaleInput.max);
+    if (!Number.isFinite(raw) || timeScaleNum.value.trim() === "") {
+      timeScaleNum.value = timeScaleInput.value;
+      return;
+    }
+    const clamped = Math.round(Math.min(max, Math.max(min, raw)));
+    timeScaleInput.value = clamped;
+    timeScaleNum.value = clamped;
+  });
+
+  timeScaleNum.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      timeScaleNum.blur();
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      // value updates after keydown, so read on next tick
+      setTimeout(() => {
+        const v = Number(timeScaleNum.value);
+        if (Number.isFinite(v)) timeScaleInput.value = v;
+      }, 0);
     }
   });
 
@@ -313,6 +409,7 @@
     rocketMissionState = null;
     if (rocketSim && pelletSystem) {
       rocketSim.resetPelletSystem(pelletSystem);
+      pelletSystem.points.visible = false;
     }
     runButton.textContent = "Start";
     syncSceneObjects();
@@ -364,6 +461,7 @@
     const defaults = activeScenario.ui || {};
     if (defaults.timeScale) {
       timeScaleInput.value = defaults.timeScale;
+      timeScaleNum.value = defaults.timeScale;
     }
     if (defaults.cameraTarget && hasSelectOption(cameraTargetSelect, defaults.cameraTarget)) {
       cameraTargetSelect.value = defaults.cameraTarget;
@@ -423,11 +521,182 @@
       return group;
     }
 
-    const material = body.name === "Sun"
-      ? new THREE.MeshBasicMaterial({ color: body.color })
-      : new THREE.MeshStandardMaterial({ color: body.color, roughness: 0.6, metalness: 0.05 });
+    if (body.name === "Sun") {
+      const mat = new THREE.MeshBasicMaterial({ color: body.color });
+      if (textures[body.name]) { mat.color.set('#ffffff'); mat.map = textures[body.name]; }
+      const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), mat);
+      return createAxialBodyMesh(body, surface);
+    }
 
-    return new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material);
+    if (body.name === "Saturn") {
+      return createSaturnMesh(body);
+    }
+
+    const isMoon = body.name === 'Moon';
+    const material = new THREE.MeshStandardMaterial({
+      color: body.color,
+      roughness: isMoon ? 0.9 : 0.6,
+      metalness: isMoon ? 0.0 : 0.05
+    });
+    if (textures[body.name]) {
+      if (!isMoon) material.color.set('#ffffff');
+      material.map = textures[body.name];
+    }
+    const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material);
+    return createAxialBodyMesh(body, surface);
+  }
+
+  function createAxialBodyMesh(body, surface) {
+    if (!Number.isFinite(body.axialTiltDeg)) {
+      return surface;
+    }
+
+    const root = new THREE.Group();
+    const axialGroup = new THREE.Group();
+    const spinGroup = new THREE.Group();
+    axialGroup.rotation.z = -body.axialTiltDeg * Math.PI / 180;
+    spinGroup.add(surface);
+    axialGroup.add(spinGroup);
+    root.add(axialGroup);
+    root.userData.axialGroup = axialGroup;
+    root.userData.spinNode = spinGroup;
+    root.userData.surface = surface;
+    return root;
+  }
+
+  function createSaturnMesh(body) {
+    const ringInnerRadius = body.rings ? body.rings.innerRadiusM / body.radius : 0;
+    const ringOuterRadius = body.rings ? body.rings.outerRadiusM / body.radius : 0;
+
+    const surfaceMaterial = new THREE.MeshStandardMaterial({
+      color: textures.Saturn ? "#ffffff" : body.color,
+      map: textures.Saturn || null,
+      roughness: 0.7,
+      metalness: 0.0
+    });
+    const surface = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40), surfaceMaterial);
+    surface.name = "SaturnSurface";
+
+    const root = createAxialBodyMesh(body, surface);
+    const axialGroup = root.userData.axialGroup;
+
+    const rings = new THREE.Mesh(
+      createSaturnRingGeometry(ringInnerRadius, ringOuterRadius, 384),
+      new THREE.MeshBasicMaterial({
+        color: "#ffffff",
+        map: saturnRingTexture,
+        transparent: true,
+        opacity: 0.92,
+        alphaTest: 0.015,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    rings.name = "SaturnRings";
+    rings.renderOrder = 2;
+    axialGroup.add(rings);
+
+    const planetShadow = createSaturnPlanetShadow(ringInnerRadius, ringOuterRadius);
+    const ringShadow = createSaturnRingShadow();
+    axialGroup.add(planetShadow, ringShadow);
+
+    root.userData.rings = rings;
+    root.userData.saturnPlanetShadow = planetShadow;
+    root.userData.saturnRingShadow = ringShadow;
+    return root;
+  }
+
+  function createSaturnPlanetShadow(ringInnerRadius, ringOuterRadius) {
+    const geometry = createSaturnShadowSectorGeometry(
+      ringInnerRadius,
+      ringOuterRadius * 0.94,
+      -Math.PI * 0.18,
+      Math.PI * 0.36,
+      64
+    );
+    const material = new THREE.MeshBasicMaterial({
+      color: "#000000",
+      transparent: true,
+      opacity: 0.32,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const shadow = new THREE.Mesh(geometry, material);
+    shadow.position.y = 0.006;
+    shadow.renderOrder = 3;
+    return shadow;
+  }
+
+  function createAnnularGeometry(innerRadius, outerRadius, segments, thetaStart = 0, thetaLength = Math.PI * 2, withUVs = false) {
+    const positions = [];
+    const uvs = withUVs ? [] : null;
+    const indices = [];
+
+    for (let i = 0; i <= segments; i += 1) {
+      const angle = thetaStart + thetaLength * i / segments;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      positions.push(innerRadius * cos, 0, innerRadius * sin);
+      positions.push(outerRadius * cos, 0, outerRadius * sin);
+      if (withUVs) {
+        uvs.push(0, i / segments);
+        uvs.push(1, i / segments);
+      }
+    }
+
+    for (let i = 0; i < segments; i += 1) {
+      const innerA = i * 2;
+      const outerA = innerA + 1;
+      const innerB = innerA + 2;
+      const outerB = innerA + 3;
+      indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    if (withUVs) geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  function createSaturnRingGeometry(innerRadius, outerRadius, segments) {
+    return createAnnularGeometry(innerRadius, outerRadius, segments, 0, Math.PI * 2, true);
+  }
+
+  function createSaturnShadowSectorGeometry(innerRadius, outerRadius, thetaStart, thetaLength, segments) {
+    return createAnnularGeometry(innerRadius, outerRadius, segments, thetaStart, thetaLength, false);
+  }
+
+  function createSaturnRingShadow() {
+    const shadow = new THREE.Mesh(
+      new THREE.TorusGeometry(1.012, 0.028, 10, 160),
+      new THREE.MeshBasicMaterial({
+        color: "#000000",
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false
+      })
+    );
+    shadow.rotation.x = Math.PI / 2;
+    shadow.renderOrder = 4;
+    return shadow;
+  }
+
+  function applyBodyTexture(mesh, name, tex) {
+    const target = mesh.userData && mesh.userData.surface ? mesh.userData.surface : mesh;
+    const mat = target.material;
+    if (!mat) return;
+    if (name !== 'Moon') mat.color.set('#ffffff');
+    mat.map = tex;
+    mat.needsUpdate = true;
+  }
+
+  function applySaturnRingTexture(mesh, tex) {
+    const rings = mesh.userData && mesh.userData.rings;
+    if (!rings || !rings.material) return;
+    rings.material.map = tex;
+    rings.material.needsUpdate = true;
   }
 
   function createTrail(body) {
@@ -477,7 +746,14 @@
         } else {
           mesh.scale.setScalar(radius);
         }
-        mesh.rotation.y += body.name === "Jupiter" ? 0.008 : 0.004;
+        if (mesh.userData && mesh.userData.spinNode) {
+          mesh.userData.spinNode.rotation.y = getBodySpinAngle(body);
+        } else {
+          mesh.rotation.y = getBodySpinAngle(body);
+        }
+        if (body.name === "Saturn") {
+          updateSaturnShadows(mesh, body);
+        }
       }
 
       if (getViewConfig().markers && shouldShowMarker(body)) {
@@ -488,6 +764,35 @@
         sunLight.position.copy(scenePosition);
       }
     }
+
+    updateLaunchSiteMarkers();
+  }
+
+  function getBodySpinAngle(body) {
+    const periodHours = body.rotationPeriodHours;
+    if (!periodHours) {
+      return 0;
+    }
+    return -elapsedSeconds / (Math.abs(periodHours) * 3600) * Math.PI * 2 * Math.sign(periodHours);
+  }
+
+  function updateSaturnShadows(mesh, saturn) {
+    const shadow = mesh.userData && mesh.userData.saturnPlanetShadow;
+    if (!shadow) return;
+
+    const sun = bodies.find((body) => body.name === "Sun");
+    if (!sun) {
+      shadow.visible = false;
+      return;
+    }
+
+    shadow.visible = true;
+    const sunDirection = toScenePosition(sun.position).sub(toScenePosition(saturn.position)).normalize();
+    const axialInverse = mesh.userData.axialGroup.quaternion.clone().invert();
+    shadow.rotation.y = Math.atan2(
+      sunDirection.applyQuaternion(axialInverse).z,
+      -sunDirection.x
+    );
   }
 
   function appendTrailSamples() {
@@ -495,13 +800,18 @@
       return;
     }
 
+    const isNearEarthScenario = (activeScenario.stepSeconds || BASE_STEP_SECONDS) <= 10;
+    const rocketInterval = isNearEarthScenario ? 30 : TRAIL_SAMPLE_SECONDS.Rocket;
+
     for (const body of bodies) {
       const trail = trails.get(body.name);
       if (!trail) {
         continue;
       }
 
-      const interval = TRAIL_SAMPLE_SECONDS[body.name] || constants.DAY * 3;
+      const interval = body.name === "Rocket"
+        ? rocketInterval
+        : (TRAIL_SAMPLE_SECONDS[body.name] || constants.DAY * 3);
       if (elapsedSeconds < trail.nextSampleTime) {
         continue;
       }
@@ -673,6 +983,40 @@
     referenceOrbitGroup.add(line);
   }
 
+  const _siteVec = new THREE.Vector3();
+  function updateLaunchSiteMarkers() {
+    const earth = bodies.find(b => b.name === 'Earth');
+    if (!earth) {
+      for (const m of launchSiteMarkers) m.dot.visible = false;
+      return;
+    }
+    const earthPos = toScenePosition(earth.position);
+    const earthR = getBodyVisualRadius(earth);
+    const dotR = Math.max(0.06, earthR * 0.035);
+    const elev = earthR * 1.018;
+    const earthMesh = bodyMeshes.get("Earth");
+    const axialRotation = earthMesh && earthMesh.userData.axialGroup
+      ? earthMesh.userData.axialGroup.quaternion
+      : null;
+
+    for (const { site, dot } of launchSiteMarkers) {
+      const theta = site.lonRad + getBodySpinAngle(earth);
+      _siteVec.set(
+        Math.cos(site.latRad) * Math.cos(theta),
+        Math.sin(site.latRad),
+        Math.cos(site.latRad) * Math.sin(theta)
+      );
+      if (axialRotation) _siteVec.applyQuaternion(axialRotation);
+      dot.scale.setScalar(dotR);
+      dot.position.set(
+        earthPos.x + elev * _siteVec.x,
+        earthPos.y + elev * _siteVec.y,
+        earthPos.z + elev * _siteVec.z
+      );
+      dot.visible = true;
+    }
+  }
+
   function createStars() {
     const count = 2600;
     const positions = new Float32Array(count * 3);
@@ -735,7 +1079,7 @@
   }
 
   function applyEarthEllipsoidScale(mesh, body, radius) {
-    const ellipsoid = rocketSim && rocketSim.earthEllipsoid();
+    const ellipsoid = body.ellipsoid || (rocketSim && rocketSim.earthEllipsoid());
     if (!ellipsoid) {
       mesh.scale.setScalar(radius);
       return;
@@ -743,7 +1087,12 @@
     const eqScale = ellipsoid.equatorialRadiusM / body.radius;
     const polScale = ellipsoid.polarRadiusM / body.radius;
     // scene Y = physics Z = Earth rotation axis = polar direction
-    mesh.scale.set(radius * eqScale, radius * polScale, radius * eqScale);
+    if (mesh.userData && mesh.userData.surface) {
+      mesh.scale.setScalar(radius);
+      mesh.userData.surface.scale.set(eqScale, polScale, eqScale);
+    } else {
+      mesh.scale.set(radius * eqScale, radius * polScale, radius * eqScale);
+    }
   }
 
   function shouldShowMarker(body) {

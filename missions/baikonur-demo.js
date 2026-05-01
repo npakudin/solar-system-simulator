@@ -1,13 +1,10 @@
 (function () {
   window.Missions = window.Missions || {};
 
+  const earthCatalog = window.SolarScenarioData.bodyCatalog.Earth;
   const earth = {
-    rotationPeriodSeconds: 86164.0905,
-    ellipsoid: {
-      equatorialRadiusM: 6378137,
-      polarRadiusM: 6356752.314245,
-      flattening: 1 / 298.257223563
-    }
+    rotationPeriodSeconds: earthCatalog.rotationPeriodHours * 3600,
+    ellipsoid: earthCatalog.ellipsoid
   };
 
   const launchSites = [
@@ -302,7 +299,7 @@
     launchSites,
     targetProfiles,
     defaultLaunchSiteId: "baikonur",
-    defaultTargetProfileId: "iss",
+    defaultTargetProfileId: "moon-demo",
     buildMission,
     firstProfileForScenario
   };

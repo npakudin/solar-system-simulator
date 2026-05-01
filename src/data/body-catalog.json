@@ -3,60 +3,100 @@
     "color": "#ffc247",
     "mass": 1.989e+30,
     "radius": 696340000,
-    "displayScale": 12
+    "displayScale": 12,
+    "axialTiltDeg": 7.25,
+    "rotationPeriodHours": 609.12,
+    "texturePath": "sim-assets/textures/solar-system-scope/sun.jpg"
   },
   "Mercury": {
     "color": "#b7a79a",
     "mass": 3.3011e+23,
     "radius": 2439700,
-    "displayScale": 1800
+    "displayScale": 1800,
+    "axialTiltDeg": 0.034,
+    "rotationPeriodHours": 1407.6,
+    "texturePath": "sim-assets/textures/solar-system-scope/mercury.jpg"
   },
   "Venus": {
     "color": "#d8c18a",
     "mass": 4.8675e+24,
     "radius": 6051800,
-    "displayScale": 950
+    "displayScale": 950,
+    "axialTiltDeg": 177.36,
+    "rotationPeriodHours": -5832.5,
+    "texturePath": "sim-assets/textures/solar-system-scope/venus_surface.jpg"
   },
   "Earth": {
     "color": "#4f9cff",
     "mass": 5.972e+24,
     "radius": 6371000,
-    "displayScale": 900
+    "displayScale": 900,
+    "axialTiltDeg": 23.44,
+    "rotationPeriodHours": 23.9344696,
+    "texturePath": "sim-assets/textures/solar-system-scope/earth_daymap.jpg",
+    "ellipsoid": {
+      "equatorialRadiusM": 6378137,
+      "polarRadiusM": 6356752.314245,
+      "flattening": 0.0033528106647474805
+    }
   },
   "Moon": {
     "color": "#b8bcc7",
     "mass": 7.347673092e+22,
     "radius": 1737400,
-    "displayScale": 1200
+    "displayScale": 1200,
+    "axialTiltDeg": 6.68,
+    "rotationPeriodHours": 655.7,
+    "texturePath": "sim-assets/textures/solar-system-scope/moon.jpg"
   },
   "Mars": {
     "color": "#c56d4f",
     "mass": 6.4171e+23,
     "radius": 3389500,
-    "displayScale": 1300
+    "displayScale": 1300,
+    "axialTiltDeg": 25.19,
+    "rotationPeriodHours": 24.6,
+    "texturePath": "sim-assets/textures/solar-system-scope/mars.jpg"
   },
   "Jupiter": {
     "color": "#d8a35d",
     "mass": 1.8986e+27,
     "radius": 69911000,
-    "displayScale": 200
+    "displayScale": 200,
+    "axialTiltDeg": 3.13,
+    "rotationPeriodHours": 9.9,
+    "texturePath": "sim-assets/textures/solar-system-scope/jupiter.jpg"
   },
   "Saturn": {
     "color": "#d7bd82",
     "mass": 5.6834e+26,
     "radius": 58232000,
-    "displayScale": 200
+    "displayScale": 200,
+    "axialTiltDeg": 26.73,
+    "rotationPeriodHours": 10.7,
+    "texturePath": "sim-assets/textures/solar-system-scope/saturn.jpg",
+    "rings": {
+      "innerRadiusM": 66900000,
+      "outerRadiusM": 139826000,
+      "texturePath": "sim-assets/textures/solar-system-scope/saturn_ring_alpha.png"
+    }
   },
   "Uranus": {
     "color": "#8fd3df",
     "mass": 8.681e+25,
     "radius": 25362000,
-    "displayScale": 260
+    "displayScale": 260,
+    "axialTiltDeg": 97.77,
+    "rotationPeriodHours": -17.2,
+    "texturePath": "sim-assets/textures/solar-system-scope/uranus.jpg"
   },
   "Neptune": {
     "color": "#5c8dff",
     "mass": 1.02413e+26,
     "radius": 24622000,
-    "displayScale": 260
+    "displayScale": 260,
+    "axialTiltDeg": 28.32,
+    "rotationPeriodHours": 16.1,
+    "texturePath": "sim-assets/textures/solar-system-scope/neptune.jpg"
   }
 }
