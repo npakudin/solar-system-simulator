@@ -17,7 +17,6 @@
   const advancedControls = document.querySelector(".advanced");
   const scenarioSelect = document.querySelector("#scenario-select");
   const runButton = document.querySelector("#toggle-run");
-  const launchButton = document.querySelector("#launch-rocket");
   const resetButton = document.querySelector("#reset-sim");
   const cameraTargetSelect = document.querySelector("#camera-target");
   const dynamicTimeScaleInput = document.querySelector("#dynamic-time-scale");
@@ -99,6 +98,7 @@
   let running = false;
   let lastFrameTime = 0;
   let rocketMissionState = null;
+  let rocketLaunched = false;
   let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
   let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
   let manualTimeScale = clampTimeScale(sliderToTimeScale(Number(timeScaleInput.value)));
@@ -309,15 +309,9 @@
     applyDefaultLaunchSite();
   });
 
-  runButton.addEventListener("click", () => {
-    running = !running;
-    runButton.textContent = running ? "Stop" : "Start";
-    if (running) {
-      collapsePanelAfterRun();
-    }
-  });
-
-  launchButton.addEventListener("click", () => {
+  function doLaunch() {
+    if (rocketLaunched) return;
+    rocketLaunched = true;
     const mission = currentMission();
     if (mission) {
       if (!rocketMissionState) {
@@ -339,9 +333,15 @@
     if (mission) {
       focusCameraOnRocketLaunch();
     }
-    running = true;
-    runButton.textContent = "Stop";
-    collapsePanelAfterRun();
+  }
+
+  runButton.addEventListener("click", () => {
+    running = !running;
+    runButton.textContent = running ? "Stop" : "Start";
+    if (running) {
+      doLaunch();
+      collapsePanelAfterRun();
+    }
   });
 
   resetButton.addEventListener("click", () => {
@@ -662,6 +662,7 @@
     elapsedSeconds = 0;
     running = false;
     rocketMissionState = null;
+    rocketLaunched = false;
     if (rocketSim && pelletSystem) {
       rocketSim.resetPelletSystem(pelletSystem);
       pelletSystem.points.visible = false;
