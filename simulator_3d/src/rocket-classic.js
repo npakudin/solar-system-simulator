@@ -178,13 +178,16 @@ const MISSIONS = {};
       }
     }
 
+    //const MIN_STEP = 0.001;
+    const MIN_STEP = 0.01;
+
     dt = Math.min(dt, chooseProximityStepSeconds(mission, bodies, rocket, timestep, dt));
 
     if (rocket.engineOn) {
-      dt = Math.min(dt, 0.001)
+      dt = Math.min(dt, MIN_STEP)
     }
 
-    return Math.max(0.001, dt);
+    return Math.max(MIN_STEP, dt);
   }
 
   function chooseProximityStepSeconds(mission, bodies, rocket, timestep, currentDt) {

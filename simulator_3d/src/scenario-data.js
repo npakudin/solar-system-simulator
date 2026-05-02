@@ -990,7 +990,7 @@ const bodyCatalog = {
 
 export const SolarScenarioData = {
   bodyCatalog,
-  defaultScenarioId: "soyuz-iss-baikonur",
+  defaultScenarioId: "voyager-2-grand-tour",
   scenarios
 };
 
