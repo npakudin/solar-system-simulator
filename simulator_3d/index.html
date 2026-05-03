@@ -3,20 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Solar System 3D</title>
+    <title>Planets 3D</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
     <div id="app">
       <aside class="panel panel-expanded" aria-label="Simulation controls">
-        <div class="title">
-          <span>Solar System 3D</span>
-        </div>
-
         <div class="panel-primary">
           <div class="controls">
             <button id="toggle-run" type="button">Start</button>
-            <button id="reset-sim" type="button">Reset</button>
+            <button id="toggle-panel" class="panel-toggle" type="button" aria-label="Hide controls" title="Hide controls">‹</button>
           </div>
 
           <label class="field">
@@ -25,19 +21,8 @@
           </label>
 
           <div class="primary-playback">
-            <label class="field">
-              <span>Camera</span>
-              <select id="camera-target">
-                <option value="free">Free</option>
-                <option value="rocket">Rocket</option>
-                <option value="earth">Earth</option>
-                <option value="jupiter">Jupiter</option>
-                <option value="sun">Sun</option>
-              </select>
-            </label>
-
             <label class="field field-range playback-scale">
-              <span>Time scale</span>
+              <span class="timescale-heading">Timescale: <input id="time-scale-num" type="number" inputmode="decimal" min="0.1" max="10000" step="any" value="1" /></span>
               <span class="range-row">
                 <span class="range-col">
                   <input id="time-scale" type="range" min="0" max="1000" value="200" list="ts-ticks" />
@@ -58,9 +43,32 @@
                     <span style="left:100%">10k</span>
                   </div>
                 </span>
-                <input id="time-scale-num" type="number" min="0.1" max="10000" step="any" value="1" />
               </span>
             </label>
+
+            <div class="camera-status-row">
+              <label class="field camera-field">
+                <span>Camera</span>
+                <select id="camera-target">
+                  <option value="free">Free</option>
+                  <option value="rocket">Rocket</option>
+                  <option value="earth">Earth</option>
+                  <option value="jupiter">Jupiter</option>
+                  <option value="sun">Sun</option>
+                </select>
+              </label>
+
+              <dl class="compact-readout" aria-label="Compact simulation status">
+                <div>
+                  <dt>Time</dt>
+                  <dd id="compact-mission-time">0s</dd>
+                </div>
+                <div>
+                  <dt>Speed</dt>
+                  <dd id="compact-rocket-speed">not launched</dd>
+                </div>
+              </dl>
+            </div>
           </div>
         </div>
 
@@ -123,20 +131,6 @@
           </div>
         </details>
 
-        <dl class="compact-readout" aria-label="Compact simulation status">
-          <div>
-            <dt>Mission</dt>
-            <dd id="compact-mission-time">0s</dd>
-          </div>
-          <div>
-            <dt>Speed</dt>
-            <dd id="compact-rocket-speed">not launched</dd>
-          </div>
-          <div>
-            <dt>Scale</dt>
-            <dd id="compact-time-scale">1x</dd>
-          </div>
-        </dl>
       </aside>
 
       <main class="viewport">

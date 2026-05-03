@@ -64,24 +64,9 @@ input {
   background: #2d384d;
 }
 
-.title {
-  display: grid;
-  gap: 4px;
-}
-
-.title span {
-  color: #93a4bd;
-  font-size: 13px;
-}
-
-.title strong {
-  font-size: 22px;
-  font-weight: 700;
-}
-
 .controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) 36px;
   gap: 8px;
   width: 100%;
   min-width: 0;
@@ -104,6 +89,11 @@ input {
   gap: 14px;
 }
 
+.camera-status-row {
+  display: grid;
+  gap: 10px;
+}
+
 button,
 select {
   min-height: 36px;
@@ -118,6 +108,11 @@ select {
 
 .controls button {
   font-size: 13px;
+}
+
+.controls .panel-toggle {
+  font-size: 20px;
+  line-height: 1;
 }
 
 button {
@@ -140,6 +135,12 @@ select:hover {
 .check span {
   color: #aebbd0;
   font-size: 13px;
+}
+
+.timescale-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 input[type="range"] {
@@ -188,7 +189,7 @@ input[type="range"] {
 }
 
 .field-range input[type="number"] {
-  width: 56px;
+  width: 58px;
   padding: 4px 6px;
   border: 1px solid #2d384d;
   border-radius: 6px;
@@ -200,7 +201,9 @@ input[type="range"] {
 
 .field-range input[type="number"]::-webkit-inner-spin-button,
 .field-range input[type="number"]::-webkit-outer-spin-button {
-  opacity: 0.4;
+  display: none;
+  margin: 0;
+  -webkit-appearance: none;
 }
 
 .check {
@@ -271,50 +274,102 @@ canvas {
     right: 10px;
     width: auto;
     max-width: calc(100vw - 20px);
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 8px 10px 7px;
     min-width: 0;
-  }
-
-  .title strong {
-    font-size: 20px;
   }
 
   .controls {
     width: 100%;
-    max-width: 366px;
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) 34px;
     gap: 6px;
+  }
+
+  button,
+  select {
+    min-height: 32px;
+    border-radius: 7px;
+  }
+
+  .panel-primary,
+  .advanced-body {
+    gap: 10px;
+  }
+
+  .advanced {
+    gap: 6px;
+  }
+
+  .advanced summary {
+    min-height: 0;
+    padding: 2px 0 0;
+    line-height: 1.2;
+  }
+
+  .primary-playback {
+    gap: 8px;
+  }
+
+  .field {
+    gap: 4px;
+  }
+
+  .field span,
+  .check span {
+    font-size: 12px;
+  }
+
+  .range-labels {
+    height: 10px;
+  }
+
+  .range-labels span {
+    font-size: 9px;
   }
 
   button,
   select,
   .field,
+  .camera-status-row,
   .primary-playback,
   .readout,
   .advanced,
   .compact-readout {
     min-width: 0;
     width: 100%;
-    max-width: 366px;
+    max-width: none;
   }
 
   .advanced-body {
-    max-height: 38vh;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
     padding-right: 2px;
   }
 
+  .camera-status-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(118px, 0.8fr);
+    align-items: end;
+    gap: 8px;
+  }
+
   .readout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-top: 10px;
   }
 
+  .readout div:nth-child(6),
+  .readout div:nth-child(10) {
+    grid-column: 1 / -1;
+  }
+
   .compact-readout {
-    display: none;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin: 0;
-    padding-top: 8px;
-    border-top: 1px solid #202738;
+    padding: 0;
+    border-top: 0;
   }
 
   .compact-readout div {
@@ -332,7 +387,10 @@ canvas {
     margin: 0;
     color: #f4f7fb;
     font-size: 12px;
-    overflow-wrap: anywhere;
+    min-height: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .panel-collapsed {
@@ -340,10 +398,31 @@ canvas {
     overflow: hidden;
   }
 
-  .panel-collapsed .title,
-  .panel-collapsed .panel-primary > .field,
-  .panel-collapsed .advanced {
+  .panel-hidden {
+    width: 54px;
+    max-width: 54px;
+    padding: 8px;
+    overflow: visible;
+  }
+
+  .panel-hidden .panel-primary > .field,
+  .panel-hidden .primary-playback,
+  .panel-hidden .advanced,
+  .panel-hidden #toggle-run {
     display: none;
+  }
+
+  .panel-hidden .controls {
+    display: block;
+  }
+
+  .panel-hidden .panel-toggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .panel-collapsed .panel-primary > .field select {
+    opacity: 0.6;
   }
 
   .panel-collapsed .panel-primary {
@@ -354,17 +433,20 @@ canvas {
     max-width: none;
   }
 
-  .panel-collapsed .compact-readout {
-    display: grid;
-    max-width: none;
-  }
-
   .readout dt,
   .readout dd {
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 
   .readout dd {
     font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .readout div:nth-child(6) dd {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

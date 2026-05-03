@@ -21,7 +21,7 @@ const {
   const advancedControls = document.querySelector(".advanced");
   const scenarioSelect = document.querySelector("#scenario-select");
   const runButton = document.querySelector("#toggle-run");
-  const resetButton = document.querySelector("#reset-sim");
+  const panelToggleButton = document.querySelector("#toggle-panel");
   const cameraTargetSelect = document.querySelector("#camera-target");
   const dynamicTimeScaleInput = document.querySelector("#dynamic-time-scale");
   const timeScaleInput = document.querySelector("#time-scale");
@@ -60,7 +60,8 @@ const {
   const orbitInclinationReadout = document.querySelector("#orbit-inclination");
   const compactMissionTimeReadout = document.querySelector("#compact-mission-time");
   const compactRocketSpeedReadout = document.querySelector("#compact-rocket-speed");
-  const compactTimeScaleReadout = document.querySelector("#compact-time-scale");
+  let scenarioSelectValueBeforeOpen = "";
+  let scenarioChangedWhileOpen = false;
 
   const DEFAULT_METERS_TO_UNITS = 1 / 8.0e9;
   const DEFAULT_RADIUS_TO_UNITS = 1 / 8.0e9;
@@ -341,11 +342,19 @@ const {
   syncReferenceOrbits();
 
   scenarioSelect.addEventListener("change", () => {
-    activeScenarioId = scenarioSelect.value;
-    activeScenario = getScenario(activeScenarioId);
-    resetSimulation();
-    applyScenarioUiDefaults();
-    applyScenarioCamera();
+    scenarioChangedWhileOpen = true;
+    selectScenario(scenarioSelect.value, rocketLaunched);
+  });
+
+  scenarioSelect.addEventListener("pointerdown", () => {
+    scenarioSelectValueBeforeOpen = scenarioSelect.value;
+    scenarioChangedWhileOpen = false;
+  });
+
+  scenarioSelect.addEventListener("blur", () => {
+    if (!running && rocketLaunched && !scenarioChangedWhileOpen && scenarioSelect.value === scenarioSelectValueBeforeOpen) {
+      resetSimulation();
+    }
   });
 
   function doLaunch() {
@@ -388,13 +397,20 @@ const {
     running = !running;
     runButton.textContent = running ? "Stop" : "Start";
     if (running) {
+      syncScenarioSelectState();
       doLaunch();
       collapsePanelAfterRun();
+    } else {
+      syncScenarioSelectState();
     }
   });
 
-  resetButton.addEventListener("click", () => {
-    resetSimulation();
+  panelToggleButton && panelToggleButton.addEventListener("click", () => {
+    const hidden = panel.classList.toggle("panel-hidden");
+    panelToggleButton.textContent = hidden ? "›" : "‹";
+    panelToggleButton.setAttribute("aria-label", hidden ? "Show controls" : "Hide controls");
+    panelToggleButton.title = hidden ? "Show controls" : "Hide controls";
+    resizeRenderer();
   });
 
   showTrailsInput.addEventListener("change", () => {
@@ -647,29 +663,24 @@ const {
     const scale = clampTimeScale(value);
     timeScaleInput.value = timeScaleToSlider(scale);
     timeScaleNum.value = fmtTimeScale(scale);
-    if (compactTimeScaleReadout) {
-      compactTimeScaleReadout.textContent = `${fmtTimeScale(scale)}x`;
-    }
   }
 
   function isMobileLayout() {
     return window.matchMedia("(max-width: 760px)").matches;
   }
 
-  function setPanelCollapsed(collapsed) {
-    if (!panel) {
-      return;
+  function syncScenarioSelectState() {
+    if (scenarioSelect) {
+      scenarioSelect.disabled = running;
     }
-    panel.classList.toggle("panel-collapsed", collapsed);
-    panel.classList.toggle("panel-expanded", !collapsed);
   }
 
   function collapsePanelAfterRun() {
     if (isMobileLayout()) {
-      setPanelCollapsed(true);
       if (advancedControls) {
         advancedControls.open = false;
       }
+      syncScenarioSelectState();
       resizeRenderer();
     }
   }
@@ -725,6 +736,20 @@ const {
     scenarioSelect.value = activeScenarioId;
   }
 
+  function selectScenario(scenarioId, startAfterReset = false) {
+    activeScenarioId = scenarioId;
+    activeScenario = getScenario(activeScenarioId);
+    resetSimulation();
+    applyScenarioUiDefaults();
+    applyScenarioCamera();
+    if (startAfterReset) {
+      running = true;
+      runButton.textContent = "Stop";
+      doLaunch();
+      collapsePanelAfterRun();
+    }
+  }
+
   function resetSimulation() {
     landingOverlay.style.display = 'none';
     hideLaunchWindowOverlay();
@@ -741,12 +766,9 @@ const {
     syncSceneObjects();
     syncReferenceOrbits();
     if (isMobileLayout()) {
-      setPanelCollapsed(false);
-      if (advancedControls) {
-        advancedControls.open = false;
-      }
       resizeRenderer();
     }
+    syncScenarioSelectState();
     syncDisplayedTimeScale(getPlaybackTimeScale());
   }
 
