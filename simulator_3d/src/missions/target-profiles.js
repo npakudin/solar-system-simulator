@@ -81,7 +81,7 @@ export const targetProfiles = [
       programTemplate: "soyuz-iss",
       headingDeg: 63.33,
       defaultLaunchSiteId: "baikonur",
-      preLaunchWindow: true,
+      preLaunchWindow: false,
       timeScale: 1
     },
     {

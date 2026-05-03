@@ -390,7 +390,17 @@ const {
     console.log('[ISS] SGP4 initialised from hardcoded TLE');
   }
 
+  function hasScriptedISSState(scenario) {
+    return !!(scenario &&
+      scenario.initialState &&
+      scenario.initialState.type === "absolute" &&
+      scenario.initialState.bodies &&
+      scenario.initialState.bodies.some((body) => body.name === "ISS"));
+  }
+
   function updateISSPosition(bodies, simulatedElapsedSeconds) {
+    if (hasScriptedISSState(activeScenario)) return;
+
     const issBody = bodies.find((b) => b.name === 'ISS');
     const earth = bodies.find((b) => b.name === 'Earth');
     if (!issBody || !earth || !_issSatrec) return;
@@ -422,26 +432,22 @@ const {
   // Returns seconds until the next launch window (when launchSite enters the ISS orbital plane).
   // Uses the SGP4-derived orbital normal and GMST to solve analytically.
   // Returns 0 if satellite.js is unavailable.
-  function computeLaunchWindowSeconds(site) {
-    if (typeof satellite === 'undefined' || !_issSatrec || !_issEpochMs) return 0;
-    const date0 = new Date(_issEpochMs);
-    const posVel = satellite.propagate(_issSatrec, date0);
-    if (!posVel || !posVel.position || !posVel.velocity) return 0;
+  function computeLaunchWindowFromState(position, velocity, site, lonOffsetRad = 0) {
+    if (!position || !velocity) return 0;
 
-    const { x: rx, y: ry, z: rz } = posVel.position;
-    const { x: vx, y: vy, z: vz } = posVel.velocity;
+    const { x: rx, y: ry, z: rz } = position;
+    const { x: vx, y: vy, z: vz } = velocity;
     const hx = ry*vz - rz*vy, hy = rz*vx - rx*vz, hz = rx*vy - ry*vx;
     const hMag = Math.sqrt(hx*hx + hy*hy + hz*hz);
     if (hMag === 0) return 0;
     const nx = hx/hMag, ny = hy/hMag, nz = hz/hMag;
 
-    const ω = 7.2921150e-5; // Earth sidereal rotation rad/s
+    const omega = 7.2921150e-5; // Earth sidereal rotation rad/s
     const latRad = site.latDeg * Math.PI / 180;
     const lonRad = site.lonDeg * Math.PI / 180;
-    const gmst0 = satellite.gstime(date0);
-    const lonEci0 = lonRad + gmst0;
+    const lon0 = lonRad + lonOffsetRad;
 
-    // Solve: nx*cos(lat)*cos(lonEci0+ω*t) + ny*cos(lat)*sin(lonEci0+ω*t) + nz*sin(lat) = 0
+    // Solve: nx*cos(lat)*cos(lon0+omega*t) + ny*cos(lat)*sin(lon0+omega*t) + nz*sin(lat) = 0
     const A = nx * Math.cos(latRad);
     const B = ny * Math.cos(latRad);
     const C = nz * Math.sin(latRad);
@@ -450,12 +456,12 @@ const {
 
     const cosArg = -C / R;
     if (Math.abs(cosArg) > 1) return 0;
-    const alpha = Math.acos(cosArg); // in [0, π]
+    const alpha = Math.acos(cosArg); // in [0, pi]
     const phi = Math.atan2(B, A);
-    const T_sidereal = 2 * Math.PI / ω; // ~86164 s
+    const T_sidereal = 2 * Math.PI / omega; // ~86164 s
 
     function nextPositiveT(theta) {
-      const t = (theta - lonEci0) / ω;
+      const t = (theta - lon0) / omega;
       const n = ((t % T_sidereal) + T_sidereal) % T_sidereal;
       return n < 60 ? n + T_sidereal : n; // skip if essentially now
     }
@@ -463,6 +469,35 @@ const {
     const t1 = nextPositiveT(phi + alpha);
     const t2 = nextPositiveT(phi - alpha);
     return Math.min(t1, t2);
+  }
+
+  function computeLaunchWindowSeconds(site) {
+    if (hasScriptedISSState(activeScenario)) {
+      const issBody = bodies.find((b) => b.name === "ISS");
+      const earth = bodies.find((b) => b.name === "Earth");
+      if (!issBody || !earth) return 0;
+      return computeLaunchWindowFromState(
+        {
+          x: issBody.position.x - earth.position.x,
+          y: issBody.position.y - earth.position.y,
+          z: issBody.position.z - earth.position.z
+        },
+        {
+          x: issBody.velocity.x - earth.velocity.x,
+          y: issBody.velocity.y - earth.velocity.y,
+          z: issBody.velocity.z - earth.velocity.z
+        },
+        site
+      );
+    }
+
+    if (typeof satellite === 'undefined' || !_issSatrec || !_issEpochMs) return 0;
+    const date0 = new Date(_issEpochMs);
+    const posVel = satellite.propagate(_issSatrec, date0);
+    if (!posVel || !posVel.position || !posVel.velocity) return 0;
+
+    const gmst0 = satellite.gstime(date0);
+    return computeLaunchWindowFromState(posVel.position, posVel.velocity, site, gmst0);
   }
 
   const scene = new THREE.Scene();
