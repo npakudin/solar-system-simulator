@@ -76,55 +76,59 @@
           <summary>Advanced</summary>
 
           <div class="advanced-body">
+            <label class="field language-field">
+              <span id="language-label">Language</span>
+              <select id="language-select">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+              </select>
+            </label>
+
             <label class="check">
               <input id="dynamic-time-scale" type="checkbox" checked />
-              <span>Auto speed</span>
+              <span id="auto-speed-label">Auto speed</span>
             </label>
 
             <label class="check">
               <input id="show-trails" type="checkbox" checked />
-              <span>Trails</span>
+              <span id="trails-label">Trails</span>
             </label>
 
             <dl class="readout">
               <div>
-                <dt>Time</dt>
+                <dt id="sim-time-label">Time</dt>
                 <dd id="time-readout">0s</dd>
               </div>
               <div>
-                <dt id="rocket-speed-label" title="Speed relative to the nearest dominant body (Earth near launch, Sun in interplanetary space)">Speed</dt>
-                <dd id="rocket-speed">not launched</dd>
-              </div>
-              <div>
-                <dt id="target-distance-label">Target</dt>
+                <dt id="target-distance-label">Distance to target</dt>
                 <dd id="target-distance">—</dd>
               </div>
               <div>
-                <dt id="speed-to-target-label">Speed to target</dt>
+                <dt id="speed-to-target-label">Approach speed</dt>
                 <dd id="speed-to-target">—</dd>
               </div>
               <div>
-                <dt>Mission time</dt>
+                <dt id="mission-time-label">Flight time</dt>
                 <dd id="mission-time">n/a</dd>
               </div>
               <div>
-                <dt>Program</dt>
+                <dt id="flight-phase-label">What the ship is doing</dt>
                 <dd id="flight-phase">n/a</dd>
               </div>
               <div>
-                <dt>Next burn</dt>
+                <dt id="next-burn-label">Next engine burn</dt>
                 <dd id="next-burn-readout">n/a</dd>
               </div>
               <div>
-                <dt>Throttle</dt>
+                <dt id="engine-power-label">Engine power</dt>
                 <dd id="throttle-readout">n/a</dd>
               </div>
               <div>
-                <dt>Fuel</dt>
+                <dt id="fuel-label">Fuel left</dt>
                 <dd id="fuel-readout">n/a</dd>
               </div>
               <div>
-                <dt>Inclination</dt>
+                <dt id="orbit-inclination-label">Orbit tilt vs Earth's path</dt>
                 <dd id="orbit-inclination">n/a</dd>
               </div>
             </dl>

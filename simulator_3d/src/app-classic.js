@@ -2,7 +2,7 @@ import { SolarPhysics, setLdemImageData } from './physics-classic.js';
 import { RocketSim as rocketSim } from './rocket-classic.js';
 import { SolarScenarioData } from './scenario-data.js';
 import { MeshFactory } from './mesh-factory.js';
-import { formatDuration, formatElapsedTime, formatCountdown, formatDist, formatCommand, firstBurnText } from './time-format.js';
+import { formatDuration, formatElapsedTime, formatCountdown, formatDist } from './time-format.js';
 
 const {
   constants,
@@ -22,6 +22,7 @@ const {
   const scenarioSelect = document.querySelector("#scenario-select");
   const runButton = document.querySelector("#toggle-run");
   const panelToggleButton = document.querySelector("#toggle-panel");
+  const languageSelect = document.querySelector("#language-select");
   const cameraTargetSelect = document.querySelector("#camera-target");
   const dynamicTimeScaleInput = document.querySelector("#dynamic-time-scale");
   const timeScaleInput = document.querySelector("#time-scale");
@@ -45,10 +46,53 @@ const {
   function clampTimeScale(value) {
     return Math.min(TIME_SCALE_MAX, Math.max(TIME_SCALE_MIN, Number(value)));
   }
+
+  function t(key, vars = {}) {
+    const text = (UI_TEXT[currentLanguage] && UI_TEXT[currentLanguage][key]) || UI_TEXT.en[key] || key;
+    return Object.entries(vars).reduce((result, [name, value]) => (
+      result.replaceAll(`{${name}}`, value)
+    ), text);
+  }
+
+  function chooseInitialLanguage() {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored === "ru" || stored === "en") {
+      return stored;
+    }
+    const browserLanguage = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+    return browserLanguage.toLowerCase().startsWith("ru") ? "ru" : "en";
+  }
+
+  function setText(selector, text) {
+    const el = document.querySelector(selector);
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function applyLanguage() {
+    if (languageSelect) {
+      languageSelect.value = currentLanguage;
+    }
+    runButton.textContent = running ? t("stop") : t("start");
+    setText(".advanced summary", t("advanced"));
+    setText("#language-label", t("language"));
+    setText("#auto-speed-label", t("autoSpeed"));
+    setText("#trails-label", t("trails"));
+    setText("#sim-time-label", t("simTime"));
+    setText("#target-distance-label", t("distanceToNextTarget"));
+    setText("#speed-to-target-label", t("approachSpeed"));
+    setText("#mission-time-label", t("flightTime"));
+    setText("#flight-phase-label", t("shipAction"));
+    setText("#next-burn-label", t("nextBurn"));
+    setText("#engine-power-label", t("enginePower"));
+    setText("#fuel-label", t("fuelLeft"));
+    setText("#orbit-inclination-label", t("orbitTilt"));
+    setText(".compact-readout div:nth-child(1) dt", t("timeCompact"));
+    setText(".compact-readout div:nth-child(2) dt", t("speedCompact"));
+  }
   const showTrailsInput = document.querySelector("#show-trails");
   const timeReadout = document.querySelector("#time-readout");
-  const rocketSpeedLabel = document.querySelector("#rocket-speed-label");
-  const rocketSpeedReadout = document.querySelector("#rocket-speed");
   const targetDistanceLabel = document.querySelector("#target-distance-label");
   const targetDistanceReadout = document.querySelector("#target-distance");
   const speedToTargetReadout = document.querySelector("#speed-to-target");
@@ -62,6 +106,70 @@ const {
   const compactRocketSpeedReadout = document.querySelector("#compact-rocket-speed");
   let scenarioSelectValueBeforeOpen = "";
   let scenarioChangedWhileOpen = false;
+  const LANGUAGE_STORAGE_KEY = "planets3d.language";
+  const UI_TEXT = {
+    en: {
+      start: "Start",
+      stop: "Stop",
+      advanced: "Advanced",
+      language: "Language",
+      autoSpeed: "Auto speed",
+      trails: "Trails",
+      simTime: "Time",
+      distanceToTarget: "Distance to {target}",
+      distanceToNextTarget: "Distance to target",
+      approachSpeed: "Approach speed",
+      flightTime: "Flight time",
+      shipAction: "What the ship is doing",
+      nextBurn: "Next engine burn",
+      enginePower: "Engine power",
+      fuelLeft: "Fuel left",
+      orbitTilt: "Orbit tilt vs Earth's path",
+      target: "Target",
+      none: "none",
+      noData: "n/a",
+      noMoreBurns: "No more planned burns",
+      ready: "Ready to launch",
+      notLaunched: "not launched",
+      coasting: "Flying without engine thrust",
+      firing: "Engine is firing",
+      nextBurnIn: "{name} in {time}",
+      targetTilt: "target {deg} deg",
+      speedCompact: "Speed",
+      timeCompact: "Time"
+    },
+    ru: {
+      start: "Старт",
+      stop: "Стоп",
+      advanced: "Дополнительно",
+      language: "Язык",
+      autoSpeed: "Автоскорость",
+      trails: "Следы",
+      simTime: "Время",
+      distanceToTarget: "Расстояние до {target}",
+      distanceToNextTarget: "Расстояние до цели",
+      approachSpeed: "Скорость сближения",
+      flightTime: "Время полета",
+      shipAction: "Что делает корабль",
+      nextBurn: "Следующий маневр",
+      enginePower: "Мощность двигателя",
+      fuelLeft: "Остаток топлива",
+      orbitTilt: "Наклон орбиты к пути Земли",
+      target: "Цель",
+      none: "нет",
+      noData: "нет данных",
+      noMoreBurns: "Больше маневров нет",
+      ready: "Готов к запуску",
+      notLaunched: "не запущен",
+      coasting: "Летит без тяги двигателя",
+      firing: "Двигатель работает",
+      nextBurnIn: "{name} через {time}",
+      targetTilt: "цель {deg} град",
+      speedCompact: "Скорость",
+      timeCompact: "Время"
+    }
+  };
+  let currentLanguage = chooseInitialLanguage();
 
   const DEFAULT_METERS_TO_UNITS = 1 / 8.0e9;
   const DEFAULT_RADIUS_TO_UNITS = 1 / 8.0e9;
@@ -336,6 +444,7 @@ const {
   }
 
   populateScenarioSelect();
+  applyLanguage();
   applyScenarioUiDefaults();
   applyScenarioCamera();
   syncSceneObjects();
@@ -343,7 +452,7 @@ const {
 
   scenarioSelect.addEventListener("change", () => {
     scenarioChangedWhileOpen = true;
-    selectScenario(scenarioSelect.value, rocketLaunched);
+    selectScenario(scenarioSelect.value, false);
   });
 
   scenarioSelect.addEventListener("pointerdown", () => {
@@ -395,7 +504,7 @@ const {
 
   runButton.addEventListener("click", () => {
     running = !running;
-    runButton.textContent = running ? "Stop" : "Start";
+    runButton.textContent = running ? t("stop") : t("start");
     if (running) {
       syncScenarioSelectState();
       doLaunch();
@@ -411,6 +520,13 @@ const {
     panelToggleButton.setAttribute("aria-label", hidden ? "Show controls" : "Hide controls");
     panelToggleButton.title = hidden ? "Show controls" : "Hide controls";
     resizeRenderer();
+  });
+
+  languageSelect && languageSelect.addEventListener("change", () => {
+    currentLanguage = languageSelect.value;
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+    applyLanguage();
+    updateReadouts();
   });
 
   showTrailsInput.addEventListener("change", () => {
@@ -744,7 +860,7 @@ const {
     applyScenarioCamera();
     if (startAfterReset) {
       running = true;
-      runButton.textContent = "Stop";
+      runButton.textContent = t("stop");
       doLaunch();
       collapsePanelAfterRun();
     }
@@ -762,7 +878,7 @@ const {
     rocketLaunched = false;
     flybyTargetIndex = 0;
     flybyTargetMinDist = Infinity;
-    runButton.textContent = "Start";
+    runButton.textContent = t("start");
     syncSceneObjects();
     syncReferenceOrbits();
     if (isMobileLayout()) {
@@ -1082,10 +1198,8 @@ const {
     const rocket = bodies.find((body) => body.name === "Rocket");
 
     if (!rocket) {
-      rocketSpeedReadout.textContent = "not launched";
-      if (rocketSpeedLabel) rocketSpeedLabel.textContent = "Speed";
       if (compactRocketSpeedReadout) {
-        compactRocketSpeedReadout.textContent = "not launched";
+        compactRocketSpeedReadout.textContent = t("notLaunched");
       }
       const flybyTargetName = getCurrentFlybyTargetName();
       const flybyTargetBody = flybyTargetName ? bodies.find((b) => b.name === flybyTargetName) : null;
@@ -1093,10 +1207,10 @@ const {
       const origin = earth || bodies[0];
       if (flybyTargetBody && origin && flybyTargetBody !== origin) {
         const dist = distance(origin.position, flybyTargetBody.position);
-        if (targetDistanceLabel) targetDistanceLabel.textContent = `→ ${flybyTargetName}`;
+        if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToTarget", { target: flybyTargetName });
         if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
       } else {
-        if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
+        if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToNextTarget");
         if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
       }
       if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
@@ -1108,14 +1222,8 @@ const {
 
     const refBody = speedRefBody(rocket);
     const spd = speedRelativeTo(rocket, refBody);
-    const refName = refBody ? refBody.name : "inertial";
-    if (rocketSpeedLabel) rocketSpeedLabel.textContent = `Speed (from ${refName})`;
 
     const missionStatus = rocketSim && rocketSim.missionStatus(rocketMissionState, bodies);
-    const fuelText = missionStatus
-      ? `, fuel ${(missionStatus.fuelMass / 1000).toFixed(1)} t`
-      : "";
-    rocketSpeedReadout.textContent = `${(spd / 1000).toFixed(2)} km/s${fuelText}`;
     if (compactRocketSpeedReadout) {
       compactRocketSpeedReadout.textContent = `${(spd / 1000).toFixed(2)} km/s`;
     }
@@ -1124,7 +1232,7 @@ const {
     const flybyTargetBody = flybyTargetName ? bodies.find((b) => b.name === flybyTargetName) : null;
     if (flybyTargetBody) {
       const dist = distance(rocket.position, flybyTargetBody.position);
-      if (targetDistanceLabel) targetDistanceLabel.textContent = `→ ${flybyTargetName}`;
+      if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToTarget", { target: flybyTargetName });
       if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
       const cs = closingSpeed(rocket, flybyTargetBody);
       if (speedToTargetReadout) {
@@ -1132,7 +1240,7 @@ const {
         speedToTargetReadout.textContent = `${sign}${(cs / 1000).toFixed(2)} km/s`;
       }
     } else {
-      if (targetDistanceLabel) targetDistanceLabel.textContent = "Target";
+      if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToNextTarget");
       if (targetDistanceReadout) targetDistanceReadout.textContent = "—";
       if (speedToTargetReadout) speedToTargetReadout.textContent = "—";
     }
@@ -1143,15 +1251,15 @@ const {
   function updateMissionReadouts(missionStatus) {
     const mission = currentMission();
     if (!mission) {
-      missionTimeReadout.textContent = "n/a";
+      missionTimeReadout.textContent = t("noData");
       if (compactMissionTimeReadout) {
-        compactMissionTimeReadout.textContent = "n/a";
+        compactMissionTimeReadout.textContent = t("noData");
       }
-      flightPhaseReadout.textContent = "n/a";
-      nextBurnReadout.textContent = "n/a";
-      throttleReadout.textContent = "n/a";
-      fuelReadout.textContent = "n/a";
-      orbitInclinationReadout.textContent = "n/a";
+      flightPhaseReadout.textContent = t("noData");
+      nextBurnReadout.textContent = t("noData");
+      throttleReadout.textContent = t("noData");
+      fuelReadout.textContent = t("noData");
+      orbitInclinationReadout.textContent = t("noData");
       return;
     }
 
@@ -1160,11 +1268,11 @@ const {
       if (compactMissionTimeReadout) {
         compactMissionTimeReadout.textContent = formatElapsedTime(0);
       }
-      flightPhaseReadout.textContent = "ready";
-      nextBurnReadout.textContent = firstBurnText(mission);
+      flightPhaseReadout.textContent = t("ready");
+      nextBurnReadout.textContent = firstBurnTextSimple(mission);
       throttleReadout.textContent = "0%";
       fuelReadout.textContent = `${(mission.vehicle.fuelMassKg / 1000).toFixed(1)} t`;
-      orbitInclinationReadout.textContent = `target ${(mission.targetOrbit || {}).inclinationDeg || "?"} deg`;
+      orbitInclinationReadout.textContent = t("targetTilt", { deg: (mission.targetOrbit || {}).inclinationDeg || "?" });
       return;
     }
 
@@ -1172,15 +1280,31 @@ const {
     if (compactMissionTimeReadout) {
       compactMissionTimeReadout.textContent = formatElapsedTime(missionStatus.missionTime);
     }
-    flightPhaseReadout.textContent = formatCommand(missionStatus);
+    flightPhaseReadout.textContent = humanFlightPhase(missionStatus);
     nextBurnReadout.textContent = missionStatus.nextBurnName
-      ? `${missionStatus.nextBurnName} in ${formatDuration(missionStatus.nextBurnInSeconds)}`
-      : "none";
+      ? t("nextBurnIn", { name: missionStatus.nextBurnName, time: formatDuration(missionStatus.nextBurnInSeconds) })
+      : t("noMoreBurns");
     throttleReadout.textContent = `${(missionStatus.throttle * 100).toFixed(0)}%`;
     fuelReadout.textContent = `${(missionStatus.fuelMass / 1000).toFixed(1)} t (${missionStatus.fuelPercent.toFixed(0)}%)`;
     orbitInclinationReadout.textContent = Number.isFinite(missionStatus.inclinationDeg)
       ? `${missionStatus.inclinationDeg.toFixed(1)} deg`
-      : `target ${missionStatus.targetInclinationDeg || "?"} deg`;
+      : t("targetTilt", { deg: missionStatus.targetInclinationDeg || "?" });
+  }
+
+  function humanFlightPhase(missionStatus) {
+    if (missionStatus.throttle > 0) {
+      return missionStatus.commandName
+        ? `${t("firing")}: ${missionStatus.commandName}`
+        : t("firing");
+    }
+    return t("coasting");
+  }
+
+  function firstBurnTextSimple(mission) {
+    const first = (mission.program || []).find((burn) => (burn.throttle || 0) > 0);
+    return first
+      ? t("nextBurnIn", { name: first.name, time: formatDuration(first.start) })
+      : t("noMoreBurns");
   }
 
   function syncReferenceOrbits() {

@@ -358,8 +358,9 @@ canvas {
     padding-top: 10px;
   }
 
+  .readout div:nth-child(5),
   .readout div:nth-child(6),
-  .readout div:nth-child(10) {
+  .readout div:nth-child(9) {
     grid-column: 1 / -1;
   }
 
@@ -445,6 +446,7 @@ canvas {
     white-space: nowrap;
   }
 
+  .readout div:nth-child(5) dd,
   .readout div:nth-child(6) dd {
     white-space: normal;
     overflow-wrap: anywhere;

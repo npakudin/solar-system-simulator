@@ -28,10 +28,11 @@ export function formatCountdown(remainingSeconds) {
 }
 
 export function formatDist(meters) {
-  if (meters < 1e6) return `${(meters / 1e3).toFixed(0)} km`;
-  if (meters < 1e9) return `${(meters / 1e6).toFixed(1)} Mm`;
-  if (meters < 1e12) return `${(meters / 1e9).toFixed(2)} Gm`;
-  return `${(meters / 1e12).toFixed(2)} Tm`;
+  const kilometers = meters / 1e3;
+  if (kilometers < 1e3) return `${kilometers.toFixed(0)} km`;
+  if (kilometers < 1e6) return `${(kilometers / 1e3).toFixed(1)}k km`;
+  if (kilometers < 1e9) return `${(kilometers / 1e6).toFixed(2)}M km`;
+  return `${(kilometers / 1e9).toFixed(2)}G km`;
 }
 
 export function formatCommand(missionStatus) {
