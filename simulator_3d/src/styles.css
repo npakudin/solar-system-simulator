@@ -256,6 +256,17 @@ input[type="range"] {
   margin: 0;
   color: #f4f7fb;
   font-size: 15px;
+  line-height: 18px;
+  min-height: 36px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.readout div:nth-child(5) dd,
+.readout div:nth-child(6) dd {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .viewport {
@@ -377,6 +388,8 @@ canvas {
     display: grid;
     gap: 2px;
     min-width: 0;
+    min-height: 31px;
+    grid-template-rows: 13px 16px;
   }
 
   .compact-readout dt {
@@ -388,7 +401,8 @@ canvas {
     margin: 0;
     color: #f4f7fb;
     font-size: 12px;
-    min-height: 15px;
+    line-height: 16px;
+    min-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -441,6 +455,8 @@ canvas {
 
   .readout dd {
     font-size: 13px;
+    line-height: 16px;
+    min-height: 32px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

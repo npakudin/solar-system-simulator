@@ -16,13 +16,13 @@
           </div>
 
           <label class="field">
-            <span>Scenario</span>
+            <span id="scenario-label">Scenario</span>
             <select id="scenario-select"></select>
           </label>
 
           <div class="primary-playback">
             <label class="field field-range playback-scale">
-              <span class="timescale-heading">Timescale: <input id="time-scale-num" type="number" inputmode="decimal" min="0.1" max="10000" step="any" value="1" /></span>
+              <span class="timescale-heading"><span id="timescale-label">Timescale</span>: <input id="time-scale-num" type="number" inputmode="decimal" min="0.1" max="10000" step="any" value="1" /></span>
               <span class="range-row">
                 <span class="range-col">
                   <input id="time-scale" type="range" min="0" max="1000" value="200" list="ts-ticks" />
@@ -48,7 +48,7 @@
 
             <div class="camera-status-row">
               <label class="field camera-field">
-                <span>Camera</span>
+                <span id="camera-label">Camera</span>
                 <select id="camera-target">
                   <option value="free">Free</option>
                   <option value="rocket">Rocket</option>
@@ -79,8 +79,6 @@
             <label class="field language-field">
               <span id="language-label">Language</span>
               <select id="language-select">
-                <option value="en">English</option>
-                <option value="ru">Русский</option>
               </select>
             </label>
 
