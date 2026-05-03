@@ -61,8 +61,6 @@ const {
   const compactMissionTimeReadout = document.querySelector("#compact-mission-time");
   const compactRocketSpeedReadout = document.querySelector("#compact-rocket-speed");
   const compactTimeScaleReadout = document.querySelector("#compact-time-scale");
-  const launchSiteSelect = document.querySelector("#launch-site-select");
-  const targetProfileSelect = document.querySelector("#target-profile-select");
 
   const DEFAULT_METERS_TO_UNITS = 1 / 8.0e9;
   const DEFAULT_RADIUS_TO_UNITS = 1 / 8.0e9;
@@ -106,8 +104,6 @@ const {
   let preLaunchPhase = false;
   let launchWindowAtSeconds = null;
   const PRE_LAUNCH_TIME_SCALE = 100;
-  let activeLaunchSiteId = rocketSim ? rocketSim.defaultLaunchSiteId() : "";
-  let activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
   let manualTimeScale = clampTimeScale(sliderToTimeScale(Number(timeScaleInput.value)));
   let effectiveTimeScale = manualTimeScale;
   const cameraFollowOffset = new THREE.Vector3();
@@ -339,9 +335,6 @@ const {
   }
 
   populateScenarioSelect();
-  populateLaunchSiteSelect();
-  populateTargetProfileSelect(activeScenarioId);
-  applyDefaultLaunchSite();
   applyScenarioUiDefaults();
   applyScenarioCamera();
   syncSceneObjects();
@@ -350,21 +343,9 @@ const {
   scenarioSelect.addEventListener("change", () => {
     activeScenarioId = scenarioSelect.value;
     activeScenario = getScenario(activeScenarioId);
-    activeTargetProfileId = rocketSim ? rocketSim.defaultTargetProfileId(activeScenarioId) : "";
-    populateTargetProfileSelect(activeScenarioId);
-    applyDefaultLaunchSite();
     resetSimulation();
     applyScenarioUiDefaults();
     applyScenarioCamera();
-  });
-
-  launchSiteSelect && launchSiteSelect.addEventListener("change", () => {
-    activeLaunchSiteId = launchSiteSelect.value;
-  });
-
-  targetProfileSelect && targetProfileSelect.addEventListener("change", () => {
-    activeTargetProfileId = targetProfileSelect.value;
-    applyDefaultLaunchSite();
   });
 
   function doLaunch() {
@@ -394,12 +375,11 @@ const {
           timeScaleNum.value = fmtTimeScale(mission.launchTimeScale);
         }
       }
-    } else {
+    } else if (activeScenario.rocket) {
       bodies = launchRocket(bodies, activeScenarioId);
     }
     syncSceneObjects();
-    cameraTargetSelect.value = "rocket";
-    if (mission) {
+    if (mission && activeScenario.ui && activeScenario.ui.focusRocketOnLaunch) {
       focusCameraOnRocketLaunch();
     }
   }
@@ -732,7 +712,7 @@ const {
   }
 
   function currentMission() {
-    return rocketSim && rocketSim.missionForScenario(activeScenarioId, activeLaunchSiteId, activeTargetProfileId);
+    return rocketSim && rocketSim.missionForScenarioId(activeScenarioId);
   }
 
   function populateScenarioSelect() {
@@ -743,43 +723,6 @@ const {
       scenarioSelect.append(option);
     }
     scenarioSelect.value = activeScenarioId;
-  }
-
-  function populateLaunchSiteSelect() {
-    if (!rocketSim || !launchSiteSelect) {
-      return;
-    }
-    launchSiteSelect.replaceChildren();
-    for (const site of rocketSim.launchSites()) {
-      const option = document.createElement("option");
-      option.value = site.id;
-      option.textContent = `${site.name} (${site.latDeg.toFixed(1)}°)`;
-      launchSiteSelect.append(option);
-    }
-    if (activeLaunchSiteId) {
-      launchSiteSelect.value = activeLaunchSiteId;
-    }
-  }
-
-  function populateTargetProfileSelect(scenarioId) {
-    if (!rocketSim || !targetProfileSelect) {
-      return;
-    }
-    const profiles = rocketSim.targetProfilesForScenario(scenarioId);
-    targetProfileSelect.replaceChildren();
-    for (const profile of profiles) {
-      const option = document.createElement("option");
-      option.value = profile.id;
-      option.textContent = profile.label;
-      targetProfileSelect.append(option);
-    }
-    const matchesCurrent = profiles.some((p) => p.id === activeTargetProfileId);
-    if (matchesCurrent) {
-      targetProfileSelect.value = activeTargetProfileId;
-    } else if (profiles.length > 0) {
-      activeTargetProfileId = profiles[0].id;
-      targetProfileSelect.value = activeTargetProfileId;
-    }
   }
 
   function resetSimulation() {
@@ -845,15 +788,6 @@ const {
       .add(side.multiplyScalar(distance));
     controls.target.copy(rocketPosition);
     controls.update();
-  }
-
-  function applyDefaultLaunchSite() {
-    if (!rocketSim || !launchSiteSelect) return;
-    const siteId = rocketSim.defaultLaunchSiteIdForScenario(activeScenarioId, activeTargetProfileId);
-    if (siteId && launchSiteSelect.value !== siteId) {
-      activeLaunchSiteId = siteId;
-      launchSiteSelect.value = siteId;
-    }
   }
 
   function applyScenarioUiDefaults() {

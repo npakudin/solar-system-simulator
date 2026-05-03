@@ -7,12 +7,24 @@ const MISSIONS = {};
 
   function missionForScenario(scenarioId, launchSiteId, targetProfileId) {
     if (LAUNCH_CONFIG) {
+      if (!launchSiteId && !targetProfileId && LAUNCH_CONFIG.buildMissionForScenario) {
+        return LAUNCH_CONFIG.buildMissionForScenario(scenarioId);
+      }
+
       return LAUNCH_CONFIG.buildMission({ scenarioId, launchSiteId, targetProfileId });
     }
 
     return Object.values(MISSIONS).find((mission) => {
       return (mission.scenarioIds || []).includes(scenarioId);
     }) || null;
+  }
+
+  function missionForScenarioId(scenarioId) {
+    if (LAUNCH_CONFIG && LAUNCH_CONFIG.buildMissionForScenario) {
+      return LAUNCH_CONFIG.buildMissionForScenario(scenarioId);
+    }
+
+    return missionForScenario(scenarioId);
   }
 
   function launchSites() {
@@ -539,6 +551,7 @@ const MISSIONS = {};
 
 export const RocketSim = {
   missionForScenario,
+  missionForScenarioId,
   launchSites,
   targetProfilesForScenario,
   defaultLaunchSiteId,

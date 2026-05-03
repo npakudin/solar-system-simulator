@@ -24,6 +24,7 @@ export const scenarios = [
         radialDeltaV: -0.3e3,
         outOfPlaneDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "jupiter-demo" },
       referenceOrbits: [
         { radius: 1.496e11, color: "#203f76", inclination: 0 },
         { radius: 7.7857e11, color: "#5f4631", inclination: 0 }
@@ -51,6 +52,7 @@ export const scenarios = [
         radialDeltaV: -0.3e3,
         outOfPlaneDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "jupiter-demo" },
       referenceOrbits: [],
       stepSeconds: 3600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
@@ -76,6 +78,7 @@ export const scenarios = [
         radialDeltaV: -0.3e3,
         outOfPlaneDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "jupiter-demo" },
       referenceOrbits: [],
       stepSeconds: 3600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
@@ -100,6 +103,7 @@ export const scenarios = [
         tangentialDeltaV: 7.85e3,
         radialDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "starlink-leo" },
       referenceOrbits: [
         { radius: 6.371e6 * 1.08, color: "#315e9f", inclination: 0 }
       ],
@@ -127,6 +131,7 @@ export const scenarios = [
         tangentialDeltaV: 7.85e3,
         radialDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "moon-demo" },
       referenceOrbits: [
         { radius: 6.371e6 * 1.08, color: "#315e9f", inclination: 0 },
         { radius: 384400000, color: "#4b5566", inclination: 0 }
@@ -151,6 +156,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 2,
+      mission: { launchSiteId: "baikonur", targetProfileId: "soyuz-iss" },
       view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
       camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
       ui: { cameraTarget: "earth", timeScale: 1 }
@@ -169,6 +175,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 2,
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "crew-dragon-iss" },
       view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
       camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
       ui: { cameraTarget: "earth", timeScale: 1 }
@@ -186,6 +193,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 30,
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "lunar-orbit" },
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
       ui: { cameraTarget: "earth", timeScale: 200 }
@@ -203,6 +211,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 60,
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "artemis-2" },
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
       ui: { cameraTarget: "earth", timeScale: 1 }
@@ -220,6 +229,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 10,
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "lunar-landing" },
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
       ui: { cameraTarget: "earth", timeScale: 200 }
@@ -235,6 +245,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 2,
+      mission: { launchSiteId: "baikonur", targetProfileId: "vostok-1" },
       view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, minBodyRadius: 0.05, markers: false },
       camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 60 },
       ui: { cameraTarget: "earth", timeScale: 1 }
@@ -252,6 +263,7 @@ export const scenarios = [
         ]
       },
       stepSeconds: 20,
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "apollo-11" },
       view: { metersToUnits: 5.0e-7, radiusScale: 5.0e-7, useDisplayScale: false, minBodyRadius: 0.12, markers: false },
       camera: { position: [0, 40, 90], target: [0, 0, 0], maxDistance: 400 },
       ui: { cameraTarget: "earth", timeScale: 200 }
@@ -275,6 +287,7 @@ export const scenarios = [
         radialDeltaV: -1500,
         outOfPlaneDeltaV: 0
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "jupiter-return" },
       referenceOrbits: [],
       stepSeconds: 3600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
@@ -299,6 +312,7 @@ export const scenarios = [
         radialDeltaV: 0,
         outOfPlaneDeltaV: 800
       },
+      mission: { launchSiteId: "cape-canaveral", targetProfileId: "voyager-2" },
       referenceOrbits: [],
       stepSeconds: 86400,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },

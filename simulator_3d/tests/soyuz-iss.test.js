@@ -1,8 +1,6 @@
-import { setupMission, runTo } from './harness.js';
+import { setupScenarioMission, runTo } from './harness.js';
 
 const SCENARIO = 'soyuz-iss-baikonur';
-const SITE     = 'baikonur';
-const PROFILE  = 'soyuz-iss';
 
 const G  = 6.67408e-11;
 const GM = G * 5.972e24;
@@ -19,7 +17,7 @@ describe('ISS orbit — altitude 380–460 km', () => {
   let state, result;
 
   beforeAll(() => {
-    state = setupMission(SCENARIO, SITE, PROFILE);
+    state = setupScenarioMission(SCENARIO);
     result = runTo(5000, state.sim, state.bodies, state.missionState);
   });
 

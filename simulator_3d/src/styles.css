@@ -99,6 +99,11 @@ input {
   gap: 18px;
 }
 
+.primary-playback {
+  display: grid;
+  gap: 14px;
+}
+
 button,
 select {
   min-height: 36px;
@@ -284,6 +289,7 @@ canvas {
   button,
   select,
   .field,
+  .primary-playback,
   .readout,
   .advanced,
   .compact-readout {
@@ -335,7 +341,7 @@ canvas {
   }
 
   .panel-collapsed .title,
-  .panel-collapsed .panel-primary .field,
+  .panel-collapsed .panel-primary > .field,
   .panel-collapsed .advanced {
     display: none;
   }

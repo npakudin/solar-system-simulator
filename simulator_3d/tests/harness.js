@@ -80,7 +80,19 @@ export function setupMission(scenarioId, launchSiteId, profileId) {
   const mission = RocketSim.missionForScenario(scenarioId, launchSiteId, profileId);
   const missionState = RocketSim.createMissionState(mission, bodies);
   const sim = { SolarPhysics, RocketSim };
-  return { sim, bodies, missionState };
+  return { sim, bodies, mission, missionState };
+}
+
+export function setupScenarioMission(scenarioId) {
+  const bodies = SolarPhysics.createInitialBodies(scenarioId);
+  const mission = RocketSim.missionForScenarioId
+    ? RocketSim.missionForScenarioId(scenarioId)
+    : RocketSim.missionForScenario(scenarioId);
+  const missionState = mission
+    ? RocketSim.createMissionState(mission, bodies)
+    : null;
+  const sim = { SolarPhysics, RocketSim };
+  return { sim, bodies, mission, missionState };
 }
 
 export function relativeSpeed(bodyA, bodyB) {

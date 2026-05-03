@@ -64,6 +64,21 @@ export function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
     };
   }
 
+export function buildMissionForScenario(scenarioId) {
+    const scenario = scenarios.find((item) => item.id === scenarioId);
+    const missionConfig = scenario && scenario.mission;
+
+    if (!missionConfig) {
+      return null;
+    }
+
+    return buildMission({
+      scenarioId,
+      launchSiteId: missionConfig.launchSiteId,
+      targetProfileId: missionConfig.targetProfileId
+    });
+  }
+
 export function firstProfileForScenario(scenarioId) {
     return targetProfiles.find((profile) => profile.scenarioIds.includes(scenarioId)) || null;
   }

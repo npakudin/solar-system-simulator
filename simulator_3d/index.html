@@ -24,38 +24,19 @@
             <select id="scenario-select"></select>
           </label>
 
-          <label class="field">
-            <span>Launch site</span>
-            <select id="launch-site-select"></select>
-          </label>
-
-          <label class="field">
-            <span>Target</span>
-            <select id="target-profile-select"></select>
-          </label>
-
-          <label class="field">
-            <span>Camera</span>
-            <select id="camera-target">
-              <option value="free">Free</option>
-              <option value="rocket">Rocket</option>
-              <option value="earth">Earth</option>
-              <option value="jupiter">Jupiter</option>
-              <option value="sun">Sun</option>
-            </select>
-          </label>
-        </div>
-
-        <details class="advanced" open>
-          <summary>Advanced</summary>
-
-          <div class="advanced-body">
-            <label class="check">
-              <input id="dynamic-time-scale" type="checkbox" checked />
-              <span>Dynamic time scale</span>
+          <div class="primary-playback">
+            <label class="field">
+              <span>Camera</span>
+              <select id="camera-target">
+                <option value="free">Free</option>
+                <option value="rocket">Rocket</option>
+                <option value="earth">Earth</option>
+                <option value="jupiter">Jupiter</option>
+                <option value="sun">Sun</option>
+              </select>
             </label>
 
-            <label class="field field-range">
+            <label class="field field-range playback-scale">
               <span>Time scale</span>
               <span class="range-row">
                 <span class="range-col">
@@ -79,6 +60,17 @@
                 </span>
                 <input id="time-scale-num" type="number" min="0.1" max="10000" step="any" value="1" />
               </span>
+            </label>
+          </div>
+        </div>
+
+        <details class="advanced" open>
+          <summary>Advanced</summary>
+
+          <div class="advanced-body">
+            <label class="check">
+              <input id="dynamic-time-scale" type="checkbox" checked />
+              <span>Auto speed</span>
             </label>
 
             <label class="check">
