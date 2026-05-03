@@ -1,6 +1,6 @@
 /**
  * Event-driven diagnostic trace for Soyuz → ISS mission.
- * Run with:  npx jest soyuz-iss-diagnostic --no-coverage
+ * Run with:  npm run test:diagnostic
  */
 
 import { loadSimulator, relativeSpeed } from './harness.js';

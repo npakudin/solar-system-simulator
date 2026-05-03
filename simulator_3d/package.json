@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage",
-    "test:verbose": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage --verbose"
+    "test:verbose": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage --verbose",
+    "test:diagnostic": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage --testMatch '**/tests/**/*.diagnostic.js' --runInBand",
+    "test:all": "npm test -- --runInBand && npm run test:diagnostic"
   },
   "devDependencies": {
     "jest": "^29.7.0"
