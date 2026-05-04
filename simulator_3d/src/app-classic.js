@@ -2,7 +2,14 @@ import { SolarPhysics, setLdemImageData } from './physics-classic.js';
 import { RocketSim as rocketSim } from './rocket-classic.js';
 import { SolarScenarioData } from './scenario-data.js';
 import { MeshFactory } from './mesh-factory.js';
-import { formatDuration, formatElapsedTime, formatCountdown, formatDist } from './time-format.js';
+import {
+  formatDuration,
+  formatElapsedTime,
+  formatCountdown,
+  formatDist,
+  formatTargetDistance,
+  formatClosingSpeed
+} from './time-format.js';
 import { computeLaunchWindowForBodies, computeLaunchWindowFromState as computeLaunchWindowFromOrbitalState } from './launch-window.js';
 
 const {
@@ -1415,12 +1422,9 @@ const {
     if (flybyTargetBody) {
       const dist = distance(rocket.position, flybyTargetBody.position);
       if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToTarget", { target: bodyLabel(flybyTargetName) });
-      if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
+      if (targetDistanceReadout) targetDistanceReadout.textContent = formatTargetDistance(dist);
       const cs = closingSpeed(rocket, flybyTargetBody);
-      if (speedToTargetReadout) {
-        const sign = cs >= 0 ? "+" : "";
-        speedToTargetReadout.textContent = `${sign}${(cs / 1000).toFixed(2)} km/s`;
-      }
+      if (speedToTargetReadout) speedToTargetReadout.textContent = formatClosingSpeed(cs);
     } else {
       if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToNextTarget");
       if (targetDistanceReadout) targetDistanceReadout.textContent = "—";

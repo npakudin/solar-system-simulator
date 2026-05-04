@@ -35,6 +35,19 @@ export function formatDist(meters) {
   return `${(kilometers / 1e9).toFixed(2)}G km`;
 }
 
+export function formatTargetDistance(meters) {
+  const absoluteMeters = Math.abs(meters);
+  if (absoluteMeters < 1000) return `${meters.toFixed(0)} m`;
+  return formatDist(meters);
+}
+
+export function formatClosingSpeed(metersPerSecond) {
+  const sign = metersPerSecond >= 0 ? "+" : "";
+  const absoluteSpeed = Math.abs(metersPerSecond);
+  if (absoluteSpeed < 1000) return `${sign}${metersPerSecond.toFixed(1)} m/s`;
+  return `${sign}${(metersPerSecond / 1000).toFixed(2)} km/s`;
+}
+
 export function formatCommand(missionStatus) {
   const name = missionStatus.commandName || "idle";
   if (Number.isFinite(missionStatus.commandStart) && Number.isFinite(missionStatus.commandEnd)) {
@@ -48,4 +61,13 @@ export function firstBurnText(mission) {
   return first ? `${first.name} at ${formatDuration(first.start)}` : "none";
 }
 
-export const TimeFormat = { formatDuration, formatElapsedTime, formatCountdown, formatDist, formatCommand, firstBurnText };
+export const TimeFormat = {
+  formatDuration,
+  formatElapsedTime,
+  formatCountdown,
+  formatDist,
+  formatTargetDistance,
+  formatClosingSpeed,
+  formatCommand,
+  firstBurnText
+};
