@@ -22,7 +22,8 @@ const scenarioData = SolarScenarioData;
       texturePath = null,
       ellipsoid = null,
       rings = null,
-      isSatellite = false
+      isSatellite = false,
+      kinematicOrbit = null
     }) {
       this.name = name;
       this.color = color;
@@ -38,6 +39,8 @@ const scenarioData = SolarScenarioData;
       this.ellipsoid = ellipsoid;
       this.rings = rings;
       this.isSatellite = isSatellite;
+      this.kinematicOrbit = kinematicOrbit;
+      this._orbitTimeSeconds = 0;
     }
   }
 
@@ -81,6 +84,7 @@ const scenarioData = SolarScenarioData;
       ellipsoid: body.ellipsoid,
       rings: body.rings,
       isSatellite: body.isSatellite || false,
+      kinematicOrbit: body.kinematicOrbit,
       position: body.position,
       velocity: body.velocity
     });
@@ -138,33 +142,33 @@ const scenarioData = SolarScenarioData;
         satelliteLib: options.satelliteLib,
         maxTleAgeDays: options.maxTleAgeDays
       });
-      return states.map((body) => createCatalogBody({
+      return withKinematicSatellites(states.map((body) => createCatalogBody({
         name: body.name,
         position: body.position,
         velocity: body.velocity
-      }));
+      })), initialState.includeBodies);
     }
 
     if (initialState.type === "vectors") {
       const included = initialState.includeBodies && new Set(initialState.includeBodies);
-      return initialState.bodies
+      return withKinematicSatellites(initialState.bodies
         .filter((body) => !included || included.has(body.name))
         .map((body) => createCatalogBody({
           name: body.name,
           position: vectorFromArray(body.positionKm, KM_TO_M),
           velocity: vectorFromArray(body.velocityKmS, KM_TO_M)
-        }));
+        })), initialState.includeBodies);
     }
 
     if (initialState.type === "absolute") {
-      return initialState.bodies.map((body) => createCatalogBody({
+      return withKinematicSatellites(initialState.bodies.map((body) => createCatalogBody({
         name: body.name,
         position: vectorFromArray(body.position, 1),
         velocity: vectorFromArray(body.velocity, 1)
-      }));
+      })), initialState.includeBodies);
     }
 
-    return initialState.bodies.map((body) => {
+    return withKinematicSatellites(initialState.bodies.map((body) => {
       if (body.orbitRadius) {
         return circularBody({
           ...catalogDefaults(body.name),
@@ -180,7 +184,7 @@ const scenarioData = SolarScenarioData;
         position: vectorFromArray(body.position, 1),
         velocity: vectorFromArray(body.velocity, 1)
       });
-    });
+    }), initialState.includeBodies);
   }
 
   function createCatalogBody({ name, position, velocity }) {
@@ -189,6 +193,32 @@ const scenarioData = SolarScenarioData;
       position,
       velocity
     });
+  }
+
+  function withKinematicSatellites(baseBodies, includeBodies) {
+    const included = includeBodies && new Set(includeBodies);
+    const bodyNames = new Set(baseBodies.map((body) => body.name));
+    const bodies = [...baseBodies];
+
+    for (const [name, catalog] of Object.entries(scenarioData.bodyCatalog)) {
+      const orbit = catalog.kinematicOrbit;
+      if (!orbit || bodyNames.has(name) || !bodyNames.has(orbit.parent)) {
+        continue;
+      }
+      if (included && !included.has(name)) {
+        continue;
+      }
+      const body = createCatalogBody({
+        name,
+        position: { x: 0, y: 0, z: 0 },
+        velocity: { x: 0, y: 0, z: 0 }
+      });
+      applyKinematicOrbit(body, bodies, 0);
+      bodies.push(body);
+      bodyNames.add(name);
+    }
+
+    return bodies;
   }
 
   function catalogDefaults(name) {
@@ -208,7 +238,8 @@ const scenarioData = SolarScenarioData;
       texturePath: catalog.texturePath || null,
       ellipsoid: catalog.ellipsoid || null,
       rings: catalog.rings || null,
-      isSatellite: catalog.isSatellite || false
+      isSatellite: catalog.isSatellite || false,
+      kinematicOrbit: catalog.kinematicOrbit || null
     };
   }
 
@@ -262,6 +293,9 @@ const scenarioData = SolarScenarioData;
 
   function stepSimulation(bodies, dt) {
     for (const body of bodies) {
+      if (body.kinematicOrbit) {
+        continue;
+      }
       body.velocity.x += body.acceleration.x * dt * 0.5;
       body.velocity.y += body.acceleration.y * dt * 0.5;
       body.velocity.z += body.acceleration.z * dt * 0.5;
@@ -271,13 +305,59 @@ const scenarioData = SolarScenarioData;
       body.position.z += body.velocity.z * dt;
     }
 
+    updateKinematicOrbits(bodies, dt);
     computeAccelerations(bodies);
 
     for (const body of bodies) {
+      if (body.kinematicOrbit) {
+        continue;
+      }
       body.velocity.x += body.acceleration.x * dt * 0.5;
       body.velocity.y += body.acceleration.y * dt * 0.5;
       body.velocity.z += body.acceleration.z * dt * 0.5;
     }
+  }
+
+  function updateKinematicOrbits(bodies, dt) {
+    for (const body of bodies) {
+      if (!body.kinematicOrbit) {
+        continue;
+      }
+      body._orbitTimeSeconds = (body._orbitTimeSeconds || 0) + dt;
+      applyKinematicOrbit(body, bodies, body._orbitTimeSeconds);
+    }
+  }
+
+  function applyKinematicOrbit(body, bodies, elapsedSeconds) {
+    const orbit = body.kinematicOrbit;
+    const parent = orbit && bodies.find((candidate) => candidate.name === orbit.parent);
+    if (!parent) {
+      return;
+    }
+
+    const phase = degreesToRadians(orbit.phaseDeg || 0);
+    const inclination = degreesToRadians(orbit.inclinationDeg || 0);
+    const angularSpeed = Math.PI * 2 / ((orbit.periodDays || 1) * DAY);
+    const angle = phase + angularSpeed * elapsedSeconds;
+    const radius = orbit.radiusM;
+    const xAxis = normalizeOrFallback(parent.position, { x: 1, y: 0, z: 0 });
+    let zAxis = normalizeOrFallback(cross(xAxis, parent.velocity), { x: 0, y: 0, z: 1 });
+    if (len(cross(xAxis, zAxis)) < 0.001) {
+      zAxis = { x: 0, y: 0, z: 1 };
+    }
+    const yAxis = normalizeOrFallback(cross(zAxis, xAxis), { x: 0, y: 1, z: 0 });
+    const inclinedYAxis = add(multiply(yAxis, Math.cos(inclination)), multiply(zAxis, Math.sin(inclination)));
+    const relPosition = add(
+      multiply(xAxis, Math.cos(angle) * radius),
+      multiply(inclinedYAxis, Math.sin(angle) * radius)
+    );
+    const relVelocity = add(
+      multiply(xAxis, -Math.sin(angle) * radius * angularSpeed),
+      multiply(inclinedYAxis, Math.cos(angle) * radius * angularSpeed)
+    );
+
+    body.position = add(parent.position, relPosition);
+    body.velocity = add(parent.velocity, relVelocity);
   }
 
   function speed(body) {

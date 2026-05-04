@@ -28,7 +28,7 @@ export function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
     const headingDeg = resolveHeading(site, profile);
     const vehicle = { ...profile.vehicle };
     const isLunarMission = ["lunar-orbit", "artemis-2", "lunar-landing", "apollo-11"].includes(profile.programTemplate);
-    const isInterplanetary = profile.programTemplate === "interplanetary-note";
+    const isInterplanetary = ["interplanetary-note", "voyager-2-grand-tour"].includes(profile.programTemplate);
 
     const scenario = scenarios.find((s) => s.id === scenarioId);
     const isEclipticFrame = scenario && scenario.initialState && (

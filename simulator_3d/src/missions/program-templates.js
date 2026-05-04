@@ -43,6 +43,26 @@ export function buildProgram(profile, headingDeg) {
       ];
     }
 
+    if (profile.programTemplate === "voyager-2-grand-tour") {
+      return [
+        { name: "Titan IIIE ascent: engine 0-500s", start: 0, end: 500, throttle: 0.95, attitude: { mode: "pitch-program", headingDeg, points: [
+          { t: 0, pitchDeg: 90 },
+          { t: 120, pitchDeg: 84 },
+          { t: 260, pitchDeg: 55 },
+          { t: 500, pitchDeg: 10 }
+        ] } },
+        { name: "Centaur coast to injection", start: 500, end: 2850, throttle: 0, attitude: { mode: "prograde" } },
+        { name: "Centaur / Star 37E Jupiter injection: engine 2850-3180s", start: 2850, end: 3180, throttle: 0.42, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 5.9e7 } },
+        { name: "coast to MCC-1", start: 3180, end: 86400, throttle: 0, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 5.9e7 } },
+        { name: "MCC-1 trim toward Jupiter: engine 86400-86520s", start: 86400, end: 86520, throttle: 0.015, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 5.9e7 } },
+        { name: "Jupiter transfer and gravity assist", start: 86520, end: 5.946e7, throttle: 0, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 7 * 86400 } },
+        { name: "Jupiter to Saturn gravity-assist coast", start: 5.946e7, end: 1.1085e8, throttle: 0, attitude: { mode: "target-body", target: "Saturn", leadSeconds: 14 * 86400 } },
+        { name: "Saturn to Uranus gravity-assist coast", start: 1.1085e8, end: 2.6577e8, throttle: 0, attitude: { mode: "target-body", target: "Uranus", leadSeconds: 30 * 86400 } },
+        { name: "Uranus to Neptune gravity-assist coast", start: 2.6577e8, end: 3.7914e8, throttle: 0, attitude: { mode: "target-body", target: "Neptune", leadSeconds: 45 * 86400 } },
+        { name: "post-Neptune interstellar coast", start: 3.7914e8, end: 4.2e8, throttle: 0, attitude: { mode: "prograde" } }
+      ];
+    }
+
     if (profile.programTemplate === "soyuz-iss" || profile.programTemplate === "crew-dragon-iss") {
       return [
         { name: "vertical climb: engine 0-12s", start: 0, end: 12, throttle: 1, attitude: { mode: "surface-up" } },

@@ -49,6 +49,50 @@ export const bodyCatalog = {
       rotationPeriodHours: 655.7,
       texturePath: "sim-assets/textures/solar-system-scope/moon.jpg"
     },
+    Io: {
+      color: "#d6b257",
+      mass: 8.931938e22,
+      radius: 1.8216e6,
+      displayScale: 650,
+      axialTiltDeg: 0.05,
+      rotationPeriodHours: 42.46,
+      texturePath: "sim-assets/textures/moons/io.png",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Jupiter", radiusM: 4.217e8, periodDays: 1.769, inclinationDeg: 0.04, phaseDeg: 20 }
+    },
+    Europa: {
+      color: "#bfc2ba",
+      mass: 4.799844e22,
+      radius: 1.5608e6,
+      displayScale: 700,
+      axialTiltDeg: 0.1,
+      rotationPeriodHours: 85.23,
+      texturePath: "sim-assets/textures/moons/europa.png",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Jupiter", radiusM: 6.711e8, periodDays: 3.551, inclinationDeg: 0.47, phaseDeg: 105 }
+    },
+    Ganymede: {
+      color: "#9b9082",
+      mass: 1.4819e23,
+      radius: 2.6341e6,
+      displayScale: 520,
+      axialTiltDeg: 0.2,
+      rotationPeriodHours: 171.7,
+      texturePath: "sim-assets/textures/moons/ganymede.png",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Jupiter", radiusM: 1.0704e9, periodDays: 7.155, inclinationDeg: 0.2, phaseDeg: 190 }
+    },
+    Callisto: {
+      color: "#8a8176",
+      mass: 1.075938e23,
+      radius: 2.4103e6,
+      displayScale: 520,
+      axialTiltDeg: 0.4,
+      rotationPeriodHours: 400.5,
+      texturePath: "sim-assets/textures/moons/callisto.png",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Jupiter", radiusM: 1.8827e9, periodDays: 16.689, inclinationDeg: 0.19, phaseDeg: 285 }
+    },
     Mars: {
       color: "#c56d4f",
       mass: 6.4171e23,
@@ -80,6 +124,61 @@ export const bodyCatalog = {
         outerRadiusM: 1.39826e8,
         texturePath: "sim-assets/textures/solar-system-scope/saturn_ring_alpha.png"
       }
+    },
+    Titan: {
+      color: "#c28b49",
+      mass: 1.3452e23,
+      radius: 2.5747e6,
+      displayScale: 560,
+      axialTiltDeg: 0.3,
+      rotationPeriodHours: 382.7,
+      texturePath: "sim-assets/textures/moons/titan.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Saturn", radiusM: 1.22187e9, periodDays: 15.945, inclinationDeg: 0.35, phaseDeg: 65 }
+    },
+    Rhea: {
+      color: "#b8b4aa",
+      mass: 2.3065e21,
+      radius: 7.638e5,
+      displayScale: 1100,
+      axialTiltDeg: 0.1,
+      rotationPeriodHours: 108.4,
+      texturePath: "sim-assets/textures/moons/rhea.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Saturn", radiusM: 5.27108e8, periodDays: 4.518, inclinationDeg: 0.35, phaseDeg: 145 }
+    },
+    Iapetus: {
+      color: "#8f857b",
+      mass: 1.8056e21,
+      radius: 7.345e5,
+      displayScale: 1100,
+      axialTiltDeg: 0.1,
+      rotationPeriodHours: 1903.7,
+      texturePath: "sim-assets/textures/moons/iapetus.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Saturn", radiusM: 3.56082e9, periodDays: 79.322, inclinationDeg: 15.47, phaseDeg: 250 }
+    },
+    Dione: {
+      color: "#c7c2b8",
+      mass: 1.0955e21,
+      radius: 5.614e5,
+      displayScale: 1250,
+      axialTiltDeg: 0.1,
+      rotationPeriodHours: 65.7,
+      texturePath: "sim-assets/textures/moons/dione.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Saturn", radiusM: 3.77396e8, periodDays: 2.737, inclinationDeg: 0.02, phaseDeg: 320 }
+    },
+    Enceladus: {
+      color: "#d8dce0",
+      mass: 1.08022e20,
+      radius: 2.521e5,
+      displayScale: 1900,
+      axialTiltDeg: 0.1,
+      rotationPeriodHours: 32.9,
+      texturePath: "sim-assets/textures/moons/enceladus.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Saturn", radiusM: 2.38042e8, periodDays: 1.37, inclinationDeg: 0.01, phaseDeg: 30 }
     },
     Uranus: {
       color: "#8fd3df",

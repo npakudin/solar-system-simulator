@@ -151,6 +151,7 @@ const {
       simTime: "Simulation time",
       distanceToTarget: "Distance to {target}",
       distanceToNextTarget: "Distance to target",
+      nextPlanet: "Next planet - {target}",
       approachSpeed: "Approach speed",
       flightTime: "Mission time",
       shipAction: "What the ship is doing",
@@ -186,6 +187,7 @@ const {
       simTime: "Время симуляции",
       distanceToTarget: "Расстояние до {target}",
       distanceToNextTarget: "Расстояние до цели",
+      nextPlanet: "Следующая планета - {target}",
       approachSpeed: "Скорость сближения",
       flightTime: "Время миссии",
       shipAction: "Что делает корабль",
@@ -283,7 +285,7 @@ const {
     ur: "اردو"
   };
   const BODY_LABELS = {
-    ru: { Sun: "Солнце", Mercury: "Меркурий", Venus: "Венера", Earth: "Земля", Moon: "Луна", Mars: "Марс", Jupiter: "Юпитер", Saturn: "Сатурн", Uranus: "Уран", Neptune: "Нептун", Rocket: "Ракета" },
+    ru: { Sun: "Солнце", Mercury: "Меркурий", Venus: "Венера", Earth: "Земля", Moon: "Луна", Mars: "Марс", Jupiter: "Юпитер", Io: "Ио", Europa: "Европа", Ganymede: "Ганимед", Callisto: "Каллисто", Saturn: "Сатурн", Titan: "Титан", Rhea: "Рея", Iapetus: "Япет", Dione: "Диона", Enceladus: "Энцелад", Uranus: "Уран", Neptune: "Нептун", Rocket: "Ракета" },
     fil: { Sun: "Araw", Earth: "Earth", Moon: "Buwan", Jupiter: "Jupiter", Saturn: "Saturn", Uranus: "Uranus", Neptune: "Neptune", Rocket: "Raketa" },
     id: { Sun: "Matahari", Earth: "Bumi", Moon: "Bulan", Jupiter: "Jupiter", Saturn: "Saturnus", Uranus: "Uranus", Neptune: "Neptunus", Rocket: "Roket" },
     zh: { Sun: "太阳", Mercury: "水星", Venus: "金星", Earth: "地球", Moon: "月球", Mars: "火星", Jupiter: "木星", Saturn: "土星", Uranus: "天王星", Neptune: "海王星", Rocket: "火箭" },
@@ -342,6 +344,7 @@ const {
     nearEarth: 20,
     nearMoon: 18,
     nearJupiter: 24,
+    flybyClosest: 0.01,
     longCoast: 220
   };
   const TRAIL_SAMPLE_SECONDS = {
@@ -379,6 +382,8 @@ const {
   let lastCameraTargetName = "";
   let flybyTargetIndex = 0;
   let flybyTargetMinDist = Infinity;
+  let flybySlowMoUntilMs = 0;
+  let flybySlowMoTargetIndex = -1;
 
   // --- ISS SGP4 tracking ---
   // TLE for 2026-05-01 (NORAD 25544)
@@ -476,6 +481,8 @@ const {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.001, 2000);
   camera.position.set(0, 85, 155);
@@ -491,6 +498,12 @@ const {
   scene.add(ambient);
 
   const sunLight = new THREE.PointLight("#fff1c4", 1.5, 0, 0);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width = 2048;
+  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.camera.near = 0.1;
+  sunLight.shadow.camera.far = 3200;
+  sunLight.shadow.bias = -0.00015;
   scene.add(sunLight);
 
 
@@ -653,6 +666,9 @@ const {
     }
     syncSceneObjects();
     if (mission && activeScenario.ui && activeScenario.ui.focusRocketOnLaunch) {
+      if (hasSelectOption(cameraTargetSelect, "rocket")) {
+        cameraTargetSelect.value = "rocket";
+      }
       focusCameraOnRocketLaunch();
     }
   }
@@ -823,7 +839,7 @@ const {
   }
 
   function stepPhysicsFrame(playbackScale) {
-    let remainingSeconds = Math.max(playbackScale, 0.001) * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
+    let remainingSeconds = Math.max(playbackScale, 0.000001) * (activeScenario.stepSeconds || BASE_STEP_SECONDS);
     let guard = 0;
 
     while (remainingSeconds > 0 && guard < MAX_FRAME_SUBSTEPS) {
@@ -884,6 +900,10 @@ const {
     }
 
     if (missionStatus.engineOn) {
+      const launchScale = chooseVisibleLaunchScale(missionStatus);
+      if (launchScale != null) {
+        return launchScale;
+      }
       return DYNAMIC_TIME_SCALE.engineOn;
     }
 
@@ -898,6 +918,11 @@ const {
     const rocket = bodies.find((body) => body.name === "Rocket");
     if (!rocket) {
       return manualTimeScale;
+    }
+
+    const flybyScale = chooseFlybyPlaybackScale();
+    if (flybyScale != null) {
+      return flybyScale;
     }
 
     const earth = bodies.find((body) => body.name === "Earth");
@@ -922,6 +947,28 @@ const {
     }
 
     return Math.min(TIME_SCALE_MAX, Math.max(manualTimeScale, DYNAMIC_TIME_SCALE.longCoast));
+  }
+
+  function chooseVisibleLaunchScale(missionStatus) {
+    const mission = currentMission();
+    const firstBurn = mission && (mission.program || []).find((burn) => (burn.throttle || 0) > 0);
+    if (!firstBurn || missionStatus.missionTime > firstBurn.end) {
+      return null;
+    }
+
+    const launchDurationSeconds = Math.max(firstBurn.end - firstBurn.start, 1);
+    const desiredWallSeconds = 5.5;
+    const framesPerSecond = 60;
+    const stepSeconds = activeScenario.stepSeconds || BASE_STEP_SECONDS;
+    return Math.max(0.000001, launchDurationSeconds / (desiredWallSeconds * framesPerSecond * stepSeconds));
+  }
+
+  function chooseFlybyPlaybackScale() {
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (flybySlowMoUntilMs > nowMs) {
+      return DYNAMIC_TIME_SCALE.flybyClosest;
+    }
+    return null;
   }
 
   function isNearFlybyBody(rocket, body, radiusMultiplier) {
@@ -990,6 +1037,7 @@ const {
     for (const body of bodies) {
       if (!bodyMeshes.has(body.name)) {
         const mesh = createBodyMesh(body);
+        configureBodyShadows(mesh, body);
         bodyMeshes.set(body.name, mesh);
         scene.add(mesh);
       }
@@ -1005,6 +1053,17 @@ const {
 
     updateMeshes();
     syncCameraOptions();
+  }
+
+  function configureBodyShadows(mesh, body) {
+    const castsAndReceives = body.name !== "Sun" && body.name !== "ISS";
+    mesh.traverse((node) => {
+      if (!node.isMesh) {
+        return;
+      }
+      node.castShadow = castsAndReceives;
+      node.receiveShadow = castsAndReceives;
+    });
   }
 
   function currentMission() {
@@ -1124,6 +1183,9 @@ const {
     const previousValue = cameraTargetSelect.value;
     const values = new Set(["free"]);
     const bodyNames = bodies.map((body) => body.name.toLowerCase());
+    if (activeScenario.rocket || currentMission()) {
+      bodyNames.push("rocket");
+    }
 
     cameraTargetSelect.replaceChildren();
     addCameraOption("free", t("freeCamera"));

@@ -1,6 +1,10 @@
 import { real20260501Bodies } from "../data/horizons-2026-05-01.js";
+import { voyager2LaunchBodies } from "../data/horizons-voyager-2-launch.js";
 
 export const defaultScenarioId = "voyager-2-grand-tour";
+
+const JUPITER_MOONS = ["Io", "Europa", "Ganymede", "Callisto"];
+const SATURN_MOONS = ["Titan", "Rhea", "Iapetus", "Dione", "Enceladus"];
 
 export const scenarios = [
     {
@@ -68,7 +72,7 @@ export const scenarios = [
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
         epoch: "2026-05-01T00:00:00 TDB",
-        includeBodies: ["Sun", "Earth", "Moon", "Jupiter", "ISS"],
+        includeBodies: ["Sun", "Earth", "Moon", "Jupiter", ...JUPITER_MOONS, "ISS"],
         bodies: real20260501Bodies
       },
       rocket: {
@@ -169,7 +173,7 @@ export const scenarios = [
       initialState: {
         type: "ephemeris",
         dateTime: "now",
-        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "ISS"]
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", ...JUPITER_MOONS, "Saturn", ...SATURN_MOONS, "Uranus", "Neptune", "ISS"]
       },
       stepSeconds: 2,
       mission: { launchSiteId: "baikonur", targetProfileId: "soyuz-iss-live-ish" },
@@ -293,7 +297,7 @@ export const scenarios = [
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
         epoch: "2026-05-01T00:00:00 TDB",
-        includeBodies: ["Sun", "Earth", "Moon", "Jupiter"],
+        includeBodies: ["Sun", "Earth", "Moon", "Jupiter", ...JUPITER_MOONS],
         bodies: real20260501Bodies
       },
       rocket: {
@@ -313,26 +317,26 @@ export const scenarios = [
     {
       id: "voyager-2-grand-tour",
       label: "Voyager 2 — grand tour (1977)",
-      description: "Grand tour of the outer planets: Jupiter, Saturn, Uranus, Neptune.",
+      description: "Voyager 2 launch epoch with NASA/JPL Horizons planet positions and the outer-planet grand tour.",
       flybyTargets: ["Jupiter", "Saturn", "Uranus", "Neptune"],
       initialState: {
         type: "vectors",
         units: { position: "km", velocity: "km/s" },
-        epoch: "2026-05-01T00:00:00 TDB",
-        bodies: real20260501Bodies
+        epoch: "1977-08-20T14:29:44 TDB",
+        bodies: voyager2LaunchBodies
       },
       rocket: {
         mode: "earthProgradeKick",
         altitudeEarthRadii: 9,
-        progradeDeltaV: 8793,
-        radialDeltaV: 0,
-        outOfPlaneDeltaV: 800
+        progradeDeltaV: 8750,
+        radialDeltaV: -250,
+        outOfPlaneDeltaV: -950
       },
       mission: { launchSiteId: "cape-canaveral", targetProfileId: "voyager-2" },
       referenceOrbits: [],
-      stepSeconds: 86400,
+      stepSeconds: 21600,
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
-      ui: { cameraTarget: "earth", timeScale: 40 }
+      ui: { cameraTarget: "earth", timeScale: 80, focusRocketOnLaunch: true }
     }
   ];

@@ -1,4 +1,16 @@
 const TRAIL_INITIAL_CAPACITY = 2000;
+const TINTED_TEXTURE_BODIES = new Set([
+  "Moon",
+  "Io",
+  "Europa",
+  "Ganymede",
+  "Callisto",
+  "Titan",
+  "Rhea",
+  "Iapetus",
+  "Dione",
+  "Enceladus"
+]);
 
   let _textures = {};
   let _getLdem = () => null;
@@ -53,13 +65,14 @@ const TRAIL_INITIAL_CAPACITY = 2000;
     }
 
     const isMoon = body.name === 'Moon';
+    const isNaturalSatellite = body.isSatellite && body.name !== 'ISS';
     const material = new THREE.MeshStandardMaterial({
       color: body.color,
-      roughness: isMoon ? 0.9 : 0.6,
-      metalness: isMoon ? 0.0 : 0.05
+      roughness: isNaturalSatellite || isMoon ? 0.88 : 0.6,
+      metalness: isNaturalSatellite || isMoon ? 0.0 : 0.05
     });
     if (_textures[body.name]) {
-      if (!isMoon) material.color.set('#ffffff');
+      if (!TINTED_TEXTURE_BODIES.has(body.name)) material.color.set('#ffffff');
       material.map = _textures[body.name];
     }
     const ldemTexture = _getLdem();
@@ -212,7 +225,7 @@ const TRAIL_INITIAL_CAPACITY = 2000;
     const target = mesh.userData && mesh.userData.surface ? mesh.userData.surface : mesh;
     const mat = target.material;
     if (!mat) return;
-    if (name !== 'Moon') mat.color.set('#ffffff');
+    if (!TINTED_TEXTURE_BODIES.has(name)) mat.color.set('#ffffff');
     mat.map = tex;
     mat.needsUpdate = true;
   }

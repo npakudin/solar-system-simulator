@@ -201,9 +201,15 @@ export const targetProfiles = [
       id: "voyager-2",
       label: "Voyager 2 grand tour",
       scenarioIds: ["voyager-2-grand-tour"],
-      targetOrbit: { name: "Outer planets grand tour", inclinationDeg: 0 },
-      vehicle: { ...heavyVehicle, fuelMassKg: 420000 },
-      programTemplate: "interplanetary-note",
+      targetOrbit: { name: "Jupiter Saturn Uranus Neptune grand tour", inclinationDeg: 0 },
+      vehicle: {
+        ...heavyVehicle,
+        dryMassKg: 721.9,
+        fuelMassKg: 620000,
+        exhaustVelocityMps: 7800,
+        maxMassFlowKgPerSec: 1000
+      },
+      programTemplate: "voyager-2-grand-tour",
       headingMode: "east",
       defaultLaunchSiteId: "cape-canaveral",
       timeScale: 1
