@@ -106,6 +106,7 @@ const {
     setText("#language-label", t("language"));
     setText("#auto-speed-label", t("autoSpeed"));
     setText("#trails-label", t("trails"));
+    setText("#realistic-sizes-label", t("realisticSizes"));
     setText("#sim-time-label", t("simTime"));
     setText("#target-distance-label", t("distanceToNextTarget"));
     setText("#speed-to-target-label", t("approachSpeed"));
@@ -121,6 +122,7 @@ const {
     syncCameraOptions();
   }
   const showTrailsInput = document.querySelector("#show-trails");
+  const realisticSizesInput = document.querySelector("#realistic-sizes");
   const timeReadout = document.querySelector("#time-readout");
   const targetDistanceLabel = document.querySelector("#target-distance-label");
   const targetDistanceReadout = document.querySelector("#target-distance");
@@ -148,6 +150,7 @@ const {
       camera: "Camera",
       autoSpeed: "Auto speed",
       trails: "Trails",
+      realisticSizes: "Realistic sizes",
       simTime: "Simulation time",
       distanceToTarget: "Distance to {target}",
       distanceToNextTarget: "Distance to target",
@@ -184,6 +187,7 @@ const {
       camera: "Камера",
       autoSpeed: "Автоскорость",
       trails: "Следы",
+      realisticSizes: "Реалистичные размеры",
       simTime: "Время симуляции",
       distanceToTarget: "Расстояние до {target}",
       distanceToNextTarget: "Расстояние до цели",
@@ -384,6 +388,7 @@ const {
   let flybyTargetMinDist = Infinity;
   let flybySlowMoUntilMs = 0;
   let flybySlowMoTargetIndex = -1;
+  let flybyCompletedTargetIndexes = new Set();
 
   // --- ISS SGP4 tracking ---
   // TLE for 2026-05-01 (NORAD 25544)
@@ -665,7 +670,7 @@ const {
       bodies = launchRocket(bodies, activeScenarioId);
     }
     syncSceneObjects();
-    if (mission && activeScenario.ui && activeScenario.ui.focusRocketOnLaunch) {
+    if (mission) {
       if (hasSelectOption(cameraTargetSelect, "rocket")) {
         cameraTargetSelect.value = "rocket";
       }
@@ -707,6 +712,15 @@ const {
   showTrailsInput.addEventListener("change", () => {
     for (const trail of trails.values()) {
       trail.line.visible = showTrailsInput.checked;
+    }
+  });
+
+  realisticSizesInput.addEventListener("change", () => {
+    syncCameraScaleLimits();
+    updateMeshes();
+    syncReferenceOrbits();
+    for (const trail of trails.values()) {
+      resetTrail(trail);
     }
   });
 
@@ -1115,6 +1129,9 @@ const {
     missionFailed = false;
     flybyTargetIndex = 0;
     flybyTargetMinDist = Infinity;
+    flybySlowMoUntilMs = 0;
+    flybySlowMoTargetIndex = -1;
+    flybyCompletedTargetIndexes = new Set();
     updateRunButtonText();
     syncSceneObjects();
     syncReferenceOrbits();
@@ -1132,7 +1149,13 @@ const {
     camera.position.set(position[0], position[1], position[2]);
     controls.target.set(target[0], target[1], target[2]);
     controls.maxDistance = config.maxDistance || 1200;
+    syncCameraScaleLimits();
     controls.update();
+  }
+
+  function syncCameraScaleLimits() {
+    camera.near = isRealisticSizesEnabled() ? 1e-8 : 0.001;
+    camera.updateProjectionMatrix();
   }
 
   function focusCameraOnRocketLaunch() {
@@ -1150,16 +1173,48 @@ const {
     }
     up.normalize();
 
-    const side = new THREE.Vector3(0, 1, 0).cross(up);
+    const mission = currentMission();
+    const site = mission && mission.launchSite;
+    const launchHeadingRad = ((mission && mission.metadata && mission.metadata.headingDeg) || 90) * Math.PI / 180;
+    const siteLatRad = ((site && site.latDeg) || 0) * Math.PI / 180;
+    const siteLonRad = ((site && site.lonDeg) || 0) * Math.PI / 180;
+    const eastPhysics = {
+      x: -Math.sin(siteLonRad),
+      y: Math.cos(siteLonRad),
+      z: 0
+    };
+    const northPhysics = {
+      x: -Math.sin(siteLatRad) * Math.cos(siteLonRad),
+      y: -Math.sin(siteLatRad) * Math.sin(siteLonRad),
+      z: Math.cos(siteLatRad)
+    };
+    const headingPhysics = {
+      x: northPhysics.x * Math.cos(launchHeadingRad) + eastPhysics.x * Math.sin(launchHeadingRad),
+      y: northPhysics.y * Math.cos(launchHeadingRad) + eastPhysics.y * Math.sin(launchHeadingRad),
+      z: northPhysics.z * Math.cos(launchHeadingRad) + eastPhysics.z * Math.sin(launchHeadingRad)
+    };
+    const heading = new THREE.Vector3(headingPhysics.x, headingPhysics.z, headingPhysics.y);
+    if (heading.lengthSq() < 0.0001) {
+      heading.set(1, 0, 0);
+    }
+    heading.normalize();
+
+    const side = heading.clone().cross(up);
+    if (side.lengthSq() < 0.0001) {
+      side.copy(new THREE.Vector3(0, 1, 0).cross(up));
+    }
     if (side.lengthSq() < 0.0001) {
       side.set(1, 0, 0);
     }
     side.normalize();
 
     const earthRadius = getBodyVisualRadius(earth);
-    const distance = Math.max(earthRadius * 1.8, 8);
+    const rocketRadius = getBodyVisualRadius(rocket);
+    const distance = isRealisticSizesEnabled()
+      ? Math.max(rocketRadius * 18, camera.near * 80)
+      : Math.max(earthRadius * 1.8, 8);
     camera.position.copy(rocketPosition)
-      .add(up.multiplyScalar(distance * 0.55))
+      .add(up.multiplyScalar(distance * 0.5))
       .add(side.multiplyScalar(distance));
     controls.target.copy(rocketPosition);
     controls.update();
@@ -1229,7 +1284,7 @@ const {
 
     for (const body of bodies) {
       const mesh = bodyMeshes.get(body.name);
-      const scenePosition = toScenePosition(body.position);
+      const scenePosition = getBodyScenePosition(body);
       mesh.position.copy(scenePosition);
 
       if (body.name === "Rocket") {
@@ -1239,9 +1294,13 @@ const {
           sceneDirection.normalize();
           mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sceneDirection);
         }
-        const earthBody = bodies.find(b => b.name === "Earth");
-        const earthR = earthBody ? getBodyVisualRadius(earthBody) : 1;
-        mesh.scale.setScalar(Math.max(0.05, earthR * 0.1));
+        if (isRealisticSizesEnabled()) {
+          mesh.scale.setScalar(getBodyVisualRadius(body));
+        } else {
+          const earthBody = bodies.find(b => b.name === "Earth");
+          const earthR = earthBody ? getBodyVisualRadius(earthBody) : 1;
+          mesh.scale.setScalar(Math.max(0.05, earthR * 0.1));
+        }
       } else {
         const radius = getBodyVisualRadius(body);
         if (body.name === "Earth") {
@@ -1318,7 +1377,7 @@ const {
         continue;
       }
 
-      appendTrailPoint(trail, toScenePosition(body.position));
+      appendTrailPoint(trail, getBodyScenePosition(body));
       trail.nextSampleTime = elapsedSeconds + interval;
     }
   }
@@ -1366,7 +1425,7 @@ const {
       return;
     }
 
-    const target = toScenePosition(body.position);
+    const target = getBodyScenePosition(body);
     const switched = targetName !== lastCameraTargetName;
     lastCameraTargetName = targetName;
 
@@ -1432,14 +1491,32 @@ const {
 
   function advanceFlybyTarget(rocket) {
     const targets = (activeScenario && activeScenario.flybyTargets) || [];
-    if (!targets.length || flybyTargetIndex >= targets.length - 1) return;
+    if (!targets.length || flybyTargetIndex >= targets.length) return;
+    if (flybyCompletedTargetIndexes.has(flybyTargetIndex)) return;
     const targetBody = bodies.find((b) => b.name === targets[flybyTargetIndex]);
     if (!targetBody) return;
     const dist = distance(rocket.position, targetBody.position);
     if (dist < flybyTargetMinDist) flybyTargetMinDist = dist;
-    if (flybyTargetMinDist < targetBody.radius * 200 && dist > flybyTargetMinDist * 2) {
-      flybyTargetIndex++;
+    const passedClosestApproach = flybyTargetMinDist < targetBody.radius * 200 && dist > flybyTargetMinDist * 2;
+    if (!passedClosestApproach) {
+      return;
+    }
+
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (flybySlowMoTargetIndex !== flybyTargetIndex) {
+      flybySlowMoTargetIndex = flybyTargetIndex;
+      flybySlowMoUntilMs = nowMs + 3000;
+      return;
+    }
+
+    if (nowMs >= flybySlowMoUntilMs) {
+      flybyCompletedTargetIndexes.add(flybyTargetIndex);
+      if (flybyTargetIndex < targets.length - 1) {
+        flybyTargetIndex++;
+      }
       flybyTargetMinDist = Infinity;
+      flybySlowMoUntilMs = 0;
+      flybySlowMoTargetIndex = -1;
     }
   }
 
@@ -1458,7 +1535,7 @@ const {
       const origin = earth || bodies[0];
       if (flybyTargetBody && origin && flybyTargetBody !== origin) {
         const dist = distance(origin.position, flybyTargetBody.position);
-        if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToTarget", { target: bodyLabel(flybyTargetName) });
+        if (targetDistanceLabel) targetDistanceLabel.textContent = t("nextPlanet", { target: bodyLabel(flybyTargetName) });
         if (targetDistanceReadout) targetDistanceReadout.textContent = formatDist(dist);
       } else {
         if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToNextTarget");
@@ -1483,7 +1560,7 @@ const {
     const flybyTargetBody = flybyTargetName ? bodies.find((b) => b.name === flybyTargetName) : null;
     if (flybyTargetBody) {
       const dist = distance(rocket.position, flybyTargetBody.position);
-      if (targetDistanceLabel) targetDistanceLabel.textContent = t("distanceToTarget", { target: bodyLabel(flybyTargetName) });
+      if (targetDistanceLabel) targetDistanceLabel.textContent = t("nextPlanet", { target: bodyLabel(flybyTargetName) });
       if (targetDistanceReadout) targetDistanceReadout.textContent = formatTargetDistance(dist);
       const cs = closingSpeed(rocket, flybyTargetBody);
       if (speedToTargetReadout) speedToTargetReadout.textContent = formatClosingSpeed(cs);
@@ -1682,15 +1759,48 @@ const {
     );
   }
 
+  function getBodyScenePosition(body) {
+    const basePosition = toScenePosition(body.position);
+    const orbit = body.kinematicOrbit;
+    if (!orbit || !getViewConfig().useDisplayScale) {
+      return basePosition;
+    }
+
+    const parent = bodies.find((candidate) => candidate.name === orbit.parent);
+    if (!parent) {
+      return basePosition;
+    }
+
+    const parentPosition = toScenePosition(parent.position);
+    const relativeScene = basePosition.sub(parentPosition);
+    if (relativeScene.lengthSq() === 0) {
+      return parentPosition;
+    }
+
+    const physicalSceneDistance = relativeScene.length();
+    const parentVisualRadius = getBodyVisualRadius(parent);
+    const visualOrbitDistance = Math.max(
+      physicalSceneDistance,
+      parentVisualRadius * (orbit.radiusM / parent.radius)
+    );
+
+    return parentPosition.add(relativeScene.normalize().multiplyScalar(visualOrbitDistance));
+  }
+
   function getViewConfig() {
     const view = activeScenario.view || {};
+    const realisticSizes = isRealisticSizesEnabled();
     return {
       metersToUnits: view.metersToUnits || DEFAULT_METERS_TO_UNITS,
       radiusScale: view.radiusScale || DEFAULT_RADIUS_TO_UNITS,
-      useDisplayScale: view.useDisplayScale === true,
-      minBodyRadius: view.minBodyRadius ?? 0.45,
+      useDisplayScale: !realisticSizes && view.useDisplayScale === true,
+      minBodyRadius: realisticSizes ? 0 : (view.minBodyRadius ?? 0.45),
       markers: view.markers !== false
     };
+  }
+
+  function isRealisticSizesEnabled() {
+    return Boolean(realisticSizesInput && realisticSizesInput.checked);
   }
 
   function getBodyVisualRadius(body) {

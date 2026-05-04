@@ -44,6 +44,21 @@ export function buildProgram(profile, headingDeg) {
     }
 
     if (profile.programTemplate === "voyager-2-grand-tour") {
+      const flybys = {
+        jupiter: 59391016,
+        saturn: 126615076,
+        uranus: 266038156,
+        neptune: 379085176
+      };
+      const correctionBurn = (name, start, duration, throttle, target, encounterTime, altitudeKm, direction) => ({
+        name,
+        start,
+        end: start + duration,
+        throttle,
+        attitude: { mode: "prograde" },
+        correction: { target, encounterTime, altitudeKm, direction }
+      });
+
       return [
         { name: "Titan IIIE ascent: engine 0-500s", start: 0, end: 500, throttle: 0.95, attitude: { mode: "pitch-program", headingDeg, points: [
           { t: 0, pitchDeg: 90 },
@@ -56,8 +71,18 @@ export function buildProgram(profile, headingDeg) {
         { name: "coast to MCC-1", start: 3180, end: 86400, throttle: 0, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 5.9e7 } },
         { name: "MCC-1 trim toward Jupiter: engine 86400-86520s", start: 86400, end: 86520, throttle: 0.015, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 5.9e7 } },
         { name: "Jupiter transfer and gravity assist", start: 86520, end: 5.946e7, throttle: 0, attitude: { mode: "target-body", target: "Jupiter", leadSeconds: 7 * 86400 } },
+        correctionBurn("Voyager TCM: Saturn aim after Jupiter", 59398216, 12 * 3600, 0.0006, "Saturn", flybys.saturn, 101000, [0.82, -0.46, 0.34]),
         { name: "Jupiter to Saturn gravity-assist coast", start: 5.946e7, end: 1.1085e8, throttle: 0, attitude: { mode: "target-body", target: "Saturn", leadSeconds: 14 * 86400 } },
+        correctionBurn("Voyager TCM: Saturn approach trim", flybys.saturn - 30 * 86400, 8 * 3600, 0.00035, "Saturn", flybys.saturn, 101000, [0.82, -0.46, 0.34]),
+        correctionBurn("Voyager TCM: Saturn final trim", flybys.saturn - 2 * 86400, 2 * 3600, 0.00015, "Saturn", flybys.saturn, 101000, [0.82, -0.46, 0.34]),
+        correctionBurn("Voyager TCM: Uranus aim after Saturn", 126622276, 12 * 3600, 0.0006, "Uranus", flybys.uranus, 81500, [-0.22, -0.73, 0.65]),
         { name: "Saturn to Uranus gravity-assist coast", start: 1.1085e8, end: 2.6577e8, throttle: 0, attitude: { mode: "target-body", target: "Uranus", leadSeconds: 30 * 86400 } },
+        correctionBurn("Voyager TCM: Uranus approach trim", flybys.uranus - 30 * 86400, 8 * 3600, 0.00035, "Uranus", flybys.uranus, 81500, [-0.22, -0.73, 0.65]),
+        correctionBurn("Voyager TCM: Uranus final trim", flybys.uranus - 2 * 86400, 2 * 3600, 0.00015, "Uranus", flybys.uranus, 81500, [-0.22, -0.73, 0.65]),
+        correctionBurn("Voyager TCM: Feb 14 1986 Neptune setup", 267831016, 12 * 3600, 0.0006, "Neptune", flybys.neptune, 4800, [0.54, 0.58, -0.61]),
+        correctionBurn("Voyager TCM: Nov 11 1988 Neptune trim", 354327916, 8 * 3600, 0.00025, "Neptune", flybys.neptune, 4800, [0.54, 0.58, -0.61]),
+        correctionBurn("Voyager TCM: Apr 20 1989 Neptune trim", 368163076, 6 * 3600, 0.00018, "Neptune", flybys.neptune, 4800, [0.54, 0.58, -0.61]),
+        correctionBurn("Voyager TCM: final Neptune roll-turn rehearsal", 378653416, 3 * 3600, 0.00012, "Neptune", flybys.neptune, 4800, [0.54, 0.58, -0.61]),
         { name: "Uranus to Neptune gravity-assist coast", start: 2.6577e8, end: 3.7914e8, throttle: 0, attitude: { mode: "target-body", target: "Neptune", leadSeconds: 45 * 86400 } },
         { name: "post-Neptune interstellar coast", start: 3.7914e8, end: 4.2e8, throttle: 0, attitude: { mode: "prograde" } }
       ];

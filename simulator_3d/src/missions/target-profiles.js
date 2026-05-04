@@ -1,4 +1,5 @@
 import { baseVehicle, heavyVehicle } from "./vehicles.js";
+import { voyager2SpacecraftState } from "../data/horizons-voyager-2-spacecraft.js";
 
 export const targetProfiles = [
     {
@@ -206,8 +207,10 @@ export const targetProfiles = [
         ...heavyVehicle,
         dryMassKg: 721.9,
         fuelMassKg: 620000,
+        correctionFuelMassKg: 160000,
         exhaustVelocityMps: 7800,
-        maxMassFlowKgPerSec: 1000
+        maxMassFlowKgPerSec: 1000,
+        initialHeliocentricState: voyager2SpacecraftState
       },
       programTemplate: "voyager-2-grand-tour",
       headingMode: "east",

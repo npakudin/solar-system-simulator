@@ -42,8 +42,10 @@ describe("Voyager 2 grand tour scenario", () => {
 
     expect(mission.launchSite.id).toBe("cape-canaveral");
     expect(mission.vehicle.dryMassKg).toBeCloseTo(721.9);
+    expect(mission.vehicle.initialHeliocentricState.epoch).toBe("1977-08-21T00:00:00 TDB");
     expect(mission.targetOrbit.name).toContain("Jupiter Saturn Uranus Neptune");
     expect(programTargets).toEqual(new Set(["Jupiter", "Saturn", "Uranus", "Neptune"]));
+    expect(mission.program.some((command) => command.correction && command.correction.target === "Neptune")).toBe(true);
   });
 
   test("clears Earth during the modeled Titan IIIE ascent", () => {
@@ -56,5 +58,19 @@ describe("Voyager 2 grand tour scenario", () => {
     expect(result.crashed).toBe(false);
     expect(rocket._landed).toBeFalsy();
     expect(altitude).toBeGreaterThan(1.0e6);
+  });
+
+  test("starts Voyager 2 from the Horizons spacecraft vector and uses finite TCM burns", () => {
+    const state = setupScenarioMission("voyager-2-grand-tour");
+    const rocket = body(state.bodies, "Rocket");
+    const earth = body(state.bodies, "Earth");
+
+    expect(state.missionState.attachedToPad).toBe(false);
+    expect(SolarPhysics.distance(rocket.position, earth.position)).toBeGreaterThan(1.0e6);
+
+    const correction = state.mission.program.find((command) => command.correction && command.throttle > 0);
+    expect(correction.end - correction.start).toBeGreaterThan(3600);
+    expect(correction.throttle).toBeLessThan(0.001);
+    expect(rocket.fuelMass).toBe(0);
   });
 });

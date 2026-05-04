@@ -1,16 +1,5 @@
 const TRAIL_INITIAL_CAPACITY = 2000;
-const TINTED_TEXTURE_BODIES = new Set([
-  "Moon",
-  "Io",
-  "Europa",
-  "Ganymede",
-  "Callisto",
-  "Titan",
-  "Rhea",
-  "Iapetus",
-  "Dione",
-  "Enceladus"
-]);
+const TINTED_TEXTURE_BODIES = new Set(["Moon"]);
 
   let _textures = {};
   let _getLdem = () => null;

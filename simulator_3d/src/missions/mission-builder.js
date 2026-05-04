@@ -55,6 +55,7 @@ export function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
         nearEarthSeconds: 2,
         orbitSeconds: isLunarMission ? 20 : 10,
         farSeconds: isInterplanetary ? 3600 : (isLunarMission ? 300 : 60),
+        correctionSeconds: isInterplanetary ? 60 : undefined,
         closeBodySeconds: isLunarMission ? 15 : 10,
         flybySeconds: isLunarMission ? 120 : 45,
         guidanceSeconds: profile.rendezvous ? 10 : undefined,

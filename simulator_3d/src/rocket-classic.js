@@ -1,10 +1,11 @@
-import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance } from './vec3.js';
-import { TWO_PI, DEG2RAD as DEG_TO_RAD } from './constants.js';
+import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance, dot, len } from './vec3.js';
+import { G, TWO_PI, DEG2RAD as DEG_TO_RAD } from './constants.js';
 import { attitudeDirection } from './attitude.js';
 import { RocketLaunchConfig as LAUNCH_CONFIG } from './scenario-data.js';
 import { rendezvousCommandName, updateRendezvousGuidance } from './rendezvous-guidance.js';
 
 const MISSIONS = {};
+const KM_TO_M = 1000;
 
   function missionForScenario(scenarioId, launchSiteId, targetProfileId) {
     if (LAUNCH_CONFIG) {
@@ -74,13 +75,46 @@ const MISSIONS = {};
 
     const site = mission.launchSite;
     const vehicle = mission.vehicle;
+    if (vehicle.initialHeliocentricState) {
+      const state = vehicle.initialHeliocentricState;
+      const rocket = {
+        name: "Rocket",
+        color: "#f7f7f2",
+        mass: vehicle.dryMassKg + (vehicle.correctionFuelMassKg || 0),
+        dryMass: vehicle.dryMassKg,
+        fuelMass: 0,
+        correctionFuelMass: vehicle.correctionFuelMassKg || 0,
+        radius: vehicle.radiusMeters || 2e6,
+        displayScale: 1,
+        position: vectorFromArray(state.positionKm, KM_TO_M),
+        velocity: vectorFromArray(state.velocityKmS, KM_TO_M),
+        acceleration: { x: 0, y: 0, z: 0 },
+        attitudeDirection: { x: 1, y: 0, z: 0 },
+        engineOn: false
+      };
+
+      bodies.push(rocket);
+
+      return {
+        mission,
+        rocket,
+        earthRotationOffsetSeconds,
+        missionTime: 0,
+        attachedToPad: false,
+        lastCommand: commandAt(mission, 0),
+        rendezvous: null,
+        rendezvousDockingOffset: { x: 0, y: 0, z: 0 }
+      };
+    }
+
     const surface = surfaceState(earth, site, mission, earthRotationOffsetSeconds);
     const rocket = {
       name: "Rocket",
       color: "#f7f7f2",
-      mass: vehicle.dryMassKg + vehicle.fuelMassKg,
+      mass: vehicle.dryMassKg + vehicle.fuelMassKg + (vehicle.correctionFuelMassKg || 0),
       dryMass: vehicle.dryMassKg,
       fuelMass: vehicle.fuelMassKg,
+      correctionFuelMass: vehicle.correctionFuelMassKg || 0,
       radius: vehicle.radiusMeters || 2e6,
       displayScale: 1,
       position: add(surface.position, multiply(surface.up, 50)),
@@ -116,11 +150,12 @@ const MISSIONS = {};
     }
 
     const command = commandAt(state.mission, state.missionTime);
-    const attitude = attitudeDirection(state, bodies, command);
+    const attitude = correctionAttitudeDirection(state, bodies, command) || attitudeDirection(state, bodies, command);
     const throttle = clamp(command.throttle || 0, 0, 1);
 
+    const availableFuel = command.correction ? (rocket.correctionFuelMass || 0) : rocket.fuelMass;
     rocket.attitudeDirection = attitude;
-    rocket.engineOn = throttle > 0 && rocket.fuelMass > 0;
+    rocket.engineOn = throttle > 0 && availableFuel > 0;
 
     if (state.attachedToPad) {
       lockRocketToPad(state, earth);
@@ -132,7 +167,7 @@ const MISSIONS = {};
     }
 
     if (rocket.engineOn) {
-      burnFuel(state, rocket, attitude, throttle, dt);
+      burnFuel(state, rocket, attitude, throttle, dt, command);
     } else {
       updateRendezvousGuidance(state, bodies, dt);
     }
@@ -169,7 +204,9 @@ const MISSIONS = {};
     const throttle = clamp(command.throttle || 0, 0, 1);
     let dt = requestedDt;
 
-    if (throttle > 0 && rocket.fuelMass > 0) {
+    if (command.correction && throttle > 0 && (rocket.correctionFuelMass || 0) > 0) {
+      dt = Math.min(dt, timestep.correctionSeconds || 60);
+    } else if (throttle > 0 && rocket.fuelMass > 0) {
       dt = Math.min(dt, timestep.thrustSeconds || 0.5);
     }
 
@@ -209,7 +246,7 @@ const MISSIONS = {};
 
     dt = Math.min(dt, chooseProximityStepSeconds(mission, bodies, rocket, timestep, dt));
 
-    if (rocket.engineOn && throttle > 0) {
+    if (!command.correction && rocket.engineOn && throttle > 0) {
       dt = Math.min(dt, MIN_STEP)
     }
 
@@ -284,6 +321,132 @@ const MISSIONS = {};
     return targetNames.has(body.name) || body.name === "Moon" || body.name === "Jupiter";
   }
 
+  function correctionAttitudeDirection(state, bodies, command) {
+    const correction = command && command.correction;
+    const rocket = state && state.rocket;
+    if (!correction || !rocket) {
+      return null;
+    }
+
+    const target = findBody(bodies, correction.target);
+    if (!target) {
+      return null;
+    }
+
+    const secondsToEncounter = Math.max(1, correction.encounterTime - state.missionTime);
+    const targetPosition = add(target.position, multiply(target.velocity, secondsToEncounter));
+    const aimDirection = normalizeOrFallback(
+      vectorFromArray(correction.direction),
+      normalizeOrFallback(subtract(rocket.position, target.position), { x: 1, y: 0, z: 0 })
+    );
+    const aimPosition = add(targetPosition, multiply(aimDirection, target.radius + (correction.altitudeKm || 0) * 1000));
+    const desiredVelocity = lambertDepartureVelocity(rocket.position, aimPosition, secondsToEncounter, bodies)
+      || multiply(subtract(aimPosition, rocket.position), 1 / secondsToEncounter);
+    return normalizeOrFallback(subtract(desiredVelocity, rocket.velocity), rocket.attitudeDirection || { x: 1, y: 0, z: 0 });
+  }
+
+  function lambertDepartureVelocity(fromPosition, toPosition, timeOfFlight, bodies) {
+    const sun = findBody(bodies, "Sun");
+    if (!sun || timeOfFlight <= 0) {
+      return null;
+    }
+
+    const r1 = subtract(fromPosition, sun.position);
+    const r2 = subtract(toPosition, sun.position);
+    const r1mag = len(r1);
+    const r2mag = len(r2);
+    if (r1mag === 0 || r2mag === 0) {
+      return null;
+    }
+
+    const cosDelta = clamp(dot(r1, r2) / (r1mag * r2mag), -1, 1);
+    const crossDelta = cross(r1, r2);
+    const sinDelta = normalizeOrFallback(crossDelta, { x: 0, y: 0, z: 1 }).z < 0
+      ? -Math.sqrt(Math.max(0, 1 - cosDelta * cosDelta))
+      : Math.sqrt(Math.max(0, 1 - cosDelta * cosDelta));
+    const a = sinDelta * Math.sqrt((r1mag * r2mag) / Math.max(1e-12, 1 - cosDelta));
+    if (!Number.isFinite(a) || Math.abs(a) < 1e-9) {
+      return null;
+    }
+
+    const mu = G * sun.mass;
+    let low = -4 * Math.PI * Math.PI;
+    let high = 4 * Math.PI * Math.PI;
+    let z = 0;
+    let y = 0;
+    let c = 0;
+    let s = 0;
+
+    for (let i = 0; i < 80; i += 1) {
+      z = (low + high) * 0.5;
+      c = stumpffC(z);
+      s = stumpffS(z);
+      if (c <= 0) {
+        low = z;
+        continue;
+      }
+      y = r1mag + r2mag + a * (z * s - 1) / Math.sqrt(c);
+      if (y < 0) {
+        low = z;
+        continue;
+      }
+      const x = Math.sqrt(y / c);
+      const t = (x * x * x * s + a * Math.sqrt(y)) / Math.sqrt(mu);
+      if (!Number.isFinite(t)) {
+        low = z;
+      } else if (t < timeOfFlight) {
+        low = z;
+      } else {
+        high = z;
+      }
+    }
+
+    if (y <= 0 || Math.abs(a) < 1e-9) {
+      return null;
+    }
+
+    const f = 1 - y / r1mag;
+    const g = a * Math.sqrt(y / mu);
+    if (!Number.isFinite(g) || Math.abs(g) < 1e-9) {
+      return null;
+    }
+
+    const heliocentricVelocity = multiply(subtract(r2, multiply(r1, f)), 1 / g);
+    return add(heliocentricVelocity, sun.velocity);
+  }
+
+  function stumpffC(z) {
+    if (z > 1e-8) {
+      const root = Math.sqrt(z);
+      return (1 - Math.cos(root)) / z;
+    }
+    if (z < -1e-8) {
+      const root = Math.sqrt(-z);
+      return (Math.cosh(root) - 1) / -z;
+    }
+    return 0.5;
+  }
+
+  function stumpffS(z) {
+    if (z > 1e-8) {
+      const root = Math.sqrt(z);
+      return (root - Math.sin(root)) / (root * root * root);
+    }
+    if (z < -1e-8) {
+      const root = Math.sqrt(-z);
+      return (Math.sinh(root) - root) / (root * root * root);
+    }
+    return 1 / 6;
+  }
+
+  function vectorFromArray(values, scale = 1) {
+    return {
+      x: ((values && values[0]) || 0) * scale,
+      y: ((values && values[1]) || 0) * scale,
+      z: ((values && values[2]) || 0) * scale
+    };
+  }
+
   function secondsToNextEvent(mission, missionTime) {
     let best = Infinity;
 
@@ -333,14 +496,22 @@ const MISSIONS = {};
   function commandAt(mission, missionTime) {
     const program = mission.program || [];
     let lastPast = null;
+    let activeCommand = null;
 
     for (const burn of program) {
       if (missionTime >= burn.start && missionTime < burn.end) {
-        return burn;
+        if (burn.correction) {
+          return burn;
+        }
+        activeCommand = activeCommand || burn;
       }
       if (missionTime >= burn.end) {
         lastPast = burn;
       }
+    }
+
+    if (activeCommand) {
+      return activeCommand;
     }
 
     return {
@@ -352,10 +523,12 @@ const MISSIONS = {};
     };
   }
 
-  function burnFuel(state, rocket, attitude, throttle, dt) {
+  function burnFuel(state, rocket, attitude, throttle, dt, command) {
     const vehicle = state.mission.vehicle;
     const desiredMassFlow = throttle * vehicle.maxMassFlowKgPerSec;
-    const maxMassFlow = rocket.fuelMass / dt;
+    const usesCorrectionFuel = command && command.correction && rocket.correctionFuelMass > 0;
+    const availableFuel = usesCorrectionFuel ? rocket.correctionFuelMass : rocket.fuelMass;
+    const maxMassFlow = availableFuel / dt;
     const massFlow = Math.max(0, Math.min(desiredMassFlow, maxMassFlow));
     const spentFuel = massFlow * dt;
 
@@ -369,8 +542,12 @@ const MISSIONS = {};
     rocket.velocity.x += attitude.x * thrustAcceleration * dt;
     rocket.velocity.y += attitude.y * thrustAcceleration * dt;
     rocket.velocity.z += attitude.z * thrustAcceleration * dt;
-    rocket.fuelMass -= spentFuel;
-    rocket.mass = rocket.dryMass + rocket.fuelMass;
+    if (usesCorrectionFuel) {
+      rocket.correctionFuelMass -= spentFuel;
+    } else {
+      rocket.fuelMass -= spentFuel;
+    }
+    rocket.mass = rocket.dryMass + rocket.fuelMass + (rocket.correctionFuelMass || 0);
   }
 
   function lockRocketToPad(state, earth) {
