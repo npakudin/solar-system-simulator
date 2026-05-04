@@ -1,0 +1,53 @@
+{
+  "source": {
+    "note": "Compact texture maps for the fun simulator. Large source maps were resized for static-file runtime size.",
+    "licenseNote": "NASA/JPL/USGS/LPI imagery is generally public domain or credited as listed by source pages; keep attribution."
+  },
+  "textures": [
+    {
+      "file": "io.png",
+      "sourceUrl": "https://moon-coverage.univ-nantes.fr/en/0.12.0/maps/index.html#io",
+      "credit": "USGS; Voyager ISS / Galileo SSI via Moon Coverage documentation"
+    },
+    {
+      "file": "europa.png",
+      "sourceUrl": "https://moon-coverage.univ-nantes.fr/en/0.12.0/maps/index.html#europa",
+      "credit": "NASA/JPL/Bjorn Jonsson; Voyager ISS / Galileo SSI via Moon Coverage documentation"
+    },
+    {
+      "file": "ganymede.png",
+      "sourceUrl": "https://moon-coverage.univ-nantes.fr/en/0.12.0/maps/index.html#ganymede",
+      "credit": "Kersten et al. 2021 / DLR; Voyager ISS / Galileo SSI via Moon Coverage documentation"
+    },
+    {
+      "file": "callisto.png",
+      "sourceUrl": "https://moon-coverage.univ-nantes.fr/en/0.12.0/maps/index.html#callisto",
+      "credit": "USGS / ESA; Voyager ISS / Galileo SSI via Moon Coverage documentation"
+    },
+    {
+      "file": "titan.jpg",
+      "sourceUrl": "https://science.nasa.gov/photojournal/titan-global-map-june-2015/",
+      "credit": "NASA/JPL-Caltech/Space Science Institute"
+    },
+    {
+      "file": "rhea.jpg",
+      "sourceUrl": "https://www.lpi.usra.edu/icy_moons/saturn/rhea/",
+      "credit": "Paul Schenk, LPI; Cassini ISS, NASA/JPL"
+    },
+    {
+      "file": "iapetus.jpg",
+      "sourceUrl": "https://www.lpi.usra.edu/icy_moons/saturn/iapetus/",
+      "credit": "Paul Schenk, LPI; Cassini ISS, NASA/JPL"
+    },
+    {
+      "file": "dione.jpg",
+      "sourceUrl": "https://www.lpi.usra.edu/icy_moons/saturn/dione/",
+      "credit": "Paul Schenk, LPI; Cassini ISS, NASA/JPL"
+    },
+    {
+      "file": "enceladus.jpg",
+      "sourceUrl": "https://www.lpi.usra.edu/icy_moons/saturn/enceladus/",
+      "credit": "Paul Schenk, LPI; Cassini ISS, NASA/JPL"
+    }
+  ]
+}
