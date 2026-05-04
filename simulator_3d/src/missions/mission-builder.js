@@ -31,7 +31,10 @@ export function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
     const isInterplanetary = profile.programTemplate === "interplanetary-note";
 
     const scenario = scenarios.find((s) => s.id === scenarioId);
-    const isEclipticFrame = scenario && scenario.initialState && scenario.initialState.type === "vectors";
+    const isEclipticFrame = scenario && scenario.initialState && (
+      scenario.initialState.type === "vectors" ||
+      scenario.initialState.type === "ephemeris"
+    );
     const missionEarth = isEclipticFrame ? { ...earth, northPole: ECLIPTIC_NORTH_POLE } : earth;
 
     return {
@@ -53,8 +56,11 @@ export function buildMission({ scenarioId, launchSiteId, targetProfileId }) {
         orbitSeconds: isLunarMission ? 20 : 10,
         farSeconds: isInterplanetary ? 3600 : (isLunarMission ? 300 : 60),
         closeBodySeconds: isLunarMission ? 15 : 10,
-        flybySeconds: isLunarMission ? 120 : 45
+        flybySeconds: isLunarMission ? 120 : 45,
+        guidanceSeconds: profile.rendezvous ? 10 : undefined,
+        terminalGuidanceSeconds: profile.rendezvous ? 0.5 : undefined
       },
+      rendezvous: profile.rendezvous ? { ...profile.rendezvous } : null,
       metadata: {
         launchSite: site.name,
         target: profile.label,

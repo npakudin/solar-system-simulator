@@ -2,6 +2,7 @@ import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distanc
 import { TWO_PI, DEG2RAD as DEG_TO_RAD } from './constants.js';
 import { attitudeDirection } from './attitude.js';
 import { RocketLaunchConfig as LAUNCH_CONFIG } from './scenario-data.js';
+import { rendezvousCommandName, updateRendezvousGuidance } from './rendezvous-guidance.js';
 
 const MISSIONS = {};
 
@@ -97,7 +98,9 @@ const MISSIONS = {};
       earthRotationOffsetSeconds,
       missionTime: 0,
       attachedToPad: true,
-      lastCommand: commandAt(mission, 0)
+      lastCommand: commandAt(mission, 0),
+      rendezvous: null,
+      rendezvousDockingOffset: { x: 0, y: 0, z: 0 }
     };
   }
 
@@ -130,6 +133,8 @@ const MISSIONS = {};
 
     if (rocket.engineOn) {
       burnFuel(state, rocket, attitude, throttle, dt);
+    } else {
+      updateRendezvousGuidance(state, bodies, dt);
     }
 
     state.lastCommand = command;
@@ -143,6 +148,9 @@ const MISSIONS = {};
     const earth = findBody(bodies, "Earth");
     if (state.attachedToPad && earth) {
       lockRocketToPad(state, earth);
+    }
+    if (state.rendezvous && state.rendezvous.phase === "docked") {
+      updateRendezvousGuidance(state, bodies, dt);
     }
 
     state.missionTime += dt;
@@ -190,12 +198,18 @@ const MISSIONS = {};
       }
     }
 
+    if (state.rendezvous && ["terminal", "capture", "docked"].includes(state.rendezvous.phase)) {
+      dt = Math.min(dt, timestep.terminalGuidanceSeconds || 1);
+    } else if (mission.rendezvous && rocket && state.missionTime >= lastProgramThrustEnd(mission)) {
+      dt = Math.min(dt, timestep.guidanceSeconds || 10);
+    }
+
     //const MIN_STEP = 0.001;
     const MIN_STEP = 0.01;
 
     dt = Math.min(dt, chooseProximityStepSeconds(mission, bodies, rocket, timestep, dt));
 
-    if (rocket.engineOn) {
+    if (rocket.engineOn && throttle > 0) {
       dt = Math.min(dt, MIN_STEP)
     }
 
@@ -488,7 +502,7 @@ const MISSIONS = {};
       ? orbitalInclination(state.rocket, earth)
       : NaN;
 
-    return {
+    const status = {
       missionTime: state.missionTime,
       fuelMass: state.rocket.fuelMass,
       fuelPercent: state.rocket.fuelMass / state.mission.vehicle.fuelMassKg * 100,
@@ -496,6 +510,9 @@ const MISSIONS = {};
       totalMass: state.rocket.mass,
       engineOn: state.rocket.engineOn,
       commandName: command.name || (state.lastCommand && state.lastCommand.name),
+      rendezvousPhase: state.rendezvous && state.rendezvous.phase,
+      rendezvousDistance: state.rendezvous && state.rendezvous.distance,
+      rendezvousRelativeSpeed: state.rendezvous && state.rendezvous.relativeSpeed,
       throttle,
       massFlowKgPerSec: massFlow,
       maxMassFlowKgPerSec: maxMassFlow,
@@ -507,6 +524,23 @@ const MISSIONS = {};
       nextBurnName: nextBurn && nextBurn.name,
       nextBurnInSeconds: nextBurn && nextBurn.start - state.missionTime
     };
+
+    const rendezvousName = rendezvousCommandName(state.rendezvous);
+    if (rendezvousName) {
+      status.commandName = rendezvousName;
+    }
+
+    return status;
+  }
+
+  function lastProgramThrustEnd(mission) {
+    let end = 0;
+    for (const command of mission.program || []) {
+      if ((command.throttle || 0) > 0) {
+        end = Math.max(end, command.end || 0);
+      }
+    }
+    return end;
   }
 
   function nextBurnInfo(mission, missionTime) {

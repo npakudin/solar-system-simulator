@@ -1,6 +1,7 @@
 import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance, len } from './vec3.js';
 import { G, DAY, YEAR } from './constants.js';
 import { SolarScenarioData } from './scenario-data.js';
+import { createEphemerisBodyStates } from './ephemeris.js';
 
 const SOFTENING = 1.0e5;
 const KM_TO_M = 1000;
@@ -115,9 +116,9 @@ const scenarioData = SolarScenarioData;
     }
   }
 
-  function createInitialBodies(scenarioId) {
+  function createInitialBodies(scenarioId, options = {}) {
     const scenario = getScenario(scenarioId);
-    const bodies = createBodiesForScenario(scenario);
+    const bodies = createBodiesForScenario(scenario, options);
 
     if (scenario.initialState.stopMassCenter) {
       stopMassCenter(bodies);
@@ -128,8 +129,22 @@ const scenarioData = SolarScenarioData;
     return bodies;
   }
 
-  function createBodiesForScenario(scenario) {
+  function createBodiesForScenario(scenario, options = {}) {
     const initialState = scenario.initialState;
+    if (initialState.type === "ephemeris") {
+      const states = createEphemerisBodyStates({
+        dateTime: options.dateTime || initialState.dateTime || new Date(),
+        includeBodies: initialState.includeBodies,
+        satelliteLib: options.satelliteLib,
+        maxTleAgeDays: options.maxTleAgeDays
+      });
+      return states.map((body) => createCatalogBody({
+        name: body.name,
+        position: body.position,
+        velocity: body.velocity
+      }));
+    }
+
     if (initialState.type === "vectors") {
       const included = initialState.includeBodies && new Set(initialState.includeBodies);
       return initialState.bodies

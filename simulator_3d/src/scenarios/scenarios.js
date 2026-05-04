@@ -162,6 +162,22 @@ export const scenarios = [
       ui: { cameraTarget: "earth", timeScale: 1 }
     },
     {
+      id: "live-ish-soyuz-iss",
+      label: "Live-ish Soyuz → ISS",
+      description: "Date-based solar-system setup with ISS from a recent bundled TLE or a deterministic ISS-like fallback.",
+      flybyTargets: ["ISS"],
+      initialState: {
+        type: "ephemeris",
+        dateTime: "now",
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "ISS"]
+      },
+      stepSeconds: 2,
+      mission: { launchSiteId: "baikonur", targetProfileId: "soyuz-iss-live-ish" },
+      view: { metersToUnits: 1.4e-7, radiusScale: 1.4e-7, useDisplayScale: false, minBodyRadius: 0.05, markers: true },
+      camera: { position: [0, 10, 20], target: [0, 0, 0], maxDistance: 900 },
+      ui: { cameraTarget: "earth", timeScale: 1 }
+    },
+    {
       id: "crew-dragon-iss-ksc",
       label: "Crew Dragon → ISS (KSC)",
       description: "Full Crew Dragon scheme for docking with ISS",

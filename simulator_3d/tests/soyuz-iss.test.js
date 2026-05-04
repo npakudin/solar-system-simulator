@@ -29,4 +29,20 @@ describe('ISS orbit — altitude 380–460 km', () => {
     expect(alt).toBeGreaterThanOrEqual(380e3);
     expect(alt).toBeLessThan(460e3);
   });
+
+  test('near-ISS scripted Soyuz enters docking capture instead of coasting forever', () => {
+    runTo(15000, state.sim, state.bodies, state.missionState);
+    const iss = getBody(state.bodies, 'ISS');
+    const rocket = getBody(state.bodies, 'Rocket');
+    const finalDistance = state.sim.SolarPhysics.distance(iss.position, rocket.position);
+    const finalRelativeSpeed = Math.hypot(
+      iss.velocity.x - rocket.velocity.x,
+      iss.velocity.y - rocket.velocity.y,
+      iss.velocity.z - rocket.velocity.z
+    );
+
+    expect(state.missionState.rendezvous.phase).toBe('docked');
+    expect(finalDistance).toBeLessThan(0.1);
+    expect(finalRelativeSpeed).toBeLessThan(0.1);
+  });
 });

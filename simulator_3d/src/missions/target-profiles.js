@@ -82,6 +82,42 @@ export const targetProfiles = [
       headingDeg: 63.33,
       defaultLaunchSiteId: "baikonur",
       preLaunchWindow: false,
+      rendezvous: {
+        targetBody: "ISS",
+        terminalStartDistanceM: 25000,
+        dockDistanceM: 0.1,
+        dockSpeedMps: 0.1,
+        captureDistanceM: 1,
+        maxGuidanceAccelerationMps2: 0.08,
+        transferCaptureDistanceM: 150000,
+        transferCaptureCorridorDistanceM: 0.05,
+        transferCaptureFuelKg: 250,
+        reserveFuelKg: 1000
+      },
+      timeScale: 1
+    },
+    {
+      id: "soyuz-iss-live-ish",
+      label: "Soyuz → ISS live-ish",
+      scenarioIds: ["live-ish-soyuz-iss"],
+      targetOrbit: { name: "ISS 420km", inclinationDeg: 51.6 },
+      vehicle: { ...baseVehicle, dryMassKg: 7000, fuelMassKg: 180000, maxMassFlowKgPerSec: 900 },
+      programTemplate: "soyuz-iss",
+      headingDeg: 63.33,
+      defaultLaunchSiteId: "baikonur",
+      preLaunchWindow: true,
+      rendezvous: {
+        targetBody: "ISS",
+        terminalStartDistanceM: 25000,
+        dockDistanceM: 0.1,
+        dockSpeedMps: 0.1,
+        captureDistanceM: 1,
+        maxGuidanceAccelerationMps2: 0.08,
+        transferCaptureDistanceM: 4000000,
+        transferCaptureCorridorDistanceM: 0.05,
+        transferCaptureFuelKg: 500,
+        reserveFuelKg: 1000
+      },
       timeScale: 1
     },
     {
