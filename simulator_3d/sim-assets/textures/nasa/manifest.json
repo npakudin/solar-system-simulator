@@ -12,6 +12,13 @@
       "credit": "NASA Earth Observatory"
     },
     {
+      "file": "earth_blue_marble_8192.jpg",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-map/",
+      "downloadUrl": "derived locally from earth_blue_marble_august_21600.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA Earth Observatory"
+    },
+    {
       "file": "earth_clouds_2048.jpg",
       "sourceUrl": "https://visibleearth.nasa.gov/images/57747/blue-marble-clouds",
       "downloadUrl": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_2048.jpg",
@@ -31,6 +38,20 @@
       "downloadUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg",
       "license": "NASA media, generally public domain; retain credit.",
       "credit": "NASA/Goddard Space Flight Center Scientific Visualization Studio"
+    },
+    {
+      "file": "mars_phobos.jpg",
+      "sourceUrl": "https://science.nasa.gov/3d-resources/mars-phobos/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/image/mars---phobos/Mars%20-%20Phobos.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA/JPL/Solar System Simulator"
+    },
+    {
+      "file": "mars_deimos.jpg",
+      "sourceUrl": "https://science.nasa.gov/3d-resources/mars-deimos/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/image/mars---deimos/Mars%20-%20Deimos.jpg",
+      "license": "NASA media, generally public domain; retain credit.",
+      "credit": "NASA/JPL/Solar System Simulator"
     },
     {
       "file": "pluto.jpg",

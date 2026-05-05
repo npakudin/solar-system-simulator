@@ -102,6 +102,28 @@ export const bodyCatalog = {
       rotationPeriodHours: 24.6,
       texturePath: "sim-assets/textures/solar-system-scope/mars.jpg"
     },
+    Phobos: {
+      color: "#8b7a6f",
+      mass: 1.06e16,
+      radius: 1.11e4,
+      displayScale: 100000,
+      axialTiltDeg: 1.08,
+      rotationPeriodHours: 0.31891 * 24,
+      texturePath: "sim-assets/textures/nasa/mars_phobos.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Mars", radiusM: 9.378e6, periodDays: 0.31891, inclinationDeg: 1.08, phaseDeg: 35 }
+    },
+    Deimos: {
+      color: "#8a7d72",
+      mass: 2.4e15,
+      radius: 6.2e3,
+      displayScale: 140000,
+      axialTiltDeg: 1.79,
+      rotationPeriodHours: 1.26244 * 24,
+      texturePath: "sim-assets/textures/nasa/mars_deimos.jpg",
+      isSatellite: true,
+      kinematicOrbit: { parent: "Mars", radiusM: 2.3459e7, periodDays: 1.26244, inclinationDeg: 1.79, phaseDeg: 145 }
+    },
     Jupiter: {
       color: "#d8a35d",
       mass: 1.8986e27,

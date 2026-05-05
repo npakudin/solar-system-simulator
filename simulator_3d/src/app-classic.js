@@ -538,12 +538,18 @@ const {
   let saturnRingTexture = null;
   const textureLoader = new THREE.TextureLoader();
 
-  // Most legacy sphere textures were authored against the app's handedness mapping.
-  function mirrorTex(tex) {
+  function mirrorTextureS(tex) {
     tex.wrapS = THREE.RepeatWrapping;
     tex.repeat.set(-1, 1);
     tex.offset.set(1, 0);
     tex.needsUpdate = true;
+  }
+
+  function applyTextureTransform(tex, bodyName) {
+    const catalog = SolarScenarioData.bodyCatalog[bodyName] || {};
+    if (catalog.mirrorTextureS) {
+      mirrorTextureS(tex);
+    }
   }
 
   const BODY_TEXTURES = Object.fromEntries(
@@ -556,9 +562,7 @@ const {
 
   for (const [name, path] of Object.entries(BODY_TEXTURES)) {
     textureLoader.load(path, (tex) => {
-      if (name !== "Earth") {
-        mirrorTex(tex);
-      }
+      applyTextureTransform(tex, name);
       textures[name] = tex;
       const mesh = bodyMeshes.get(name);
       if (mesh) applyBodyTexture(mesh, name, tex);

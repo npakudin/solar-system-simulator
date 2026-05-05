@@ -5,6 +5,7 @@ export const defaultScenarioId = "voyager-2-grand-tour";
 
 const JUPITER_MOONS = ["Io", "Europa", "Ganymede", "Callisto"];
 const SATURN_MOONS = ["Titan", "Rhea", "Iapetus", "Dione", "Enceladus"];
+const MARS_MOONS = ["Phobos", "Deimos"];
 
 export const scenarios = [
     {
@@ -173,7 +174,7 @@ export const scenarios = [
       initialState: {
         type: "ephemeris",
         dateTime: "now",
-        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", ...JUPITER_MOONS, "Saturn", ...SATURN_MOONS, "Uranus", "Neptune", "Pluto", "ISS"]
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", ...MARS_MOONS, "Jupiter", ...JUPITER_MOONS, "Saturn", ...SATURN_MOONS, "Uranus", "Neptune", "Pluto", "ISS"]
       },
       stepSeconds: 2,
       mission: { launchSiteId: "baikonur", targetProfileId: "soyuz-iss-live-ish" },
