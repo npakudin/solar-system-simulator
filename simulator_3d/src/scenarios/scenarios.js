@@ -173,7 +173,7 @@ export const scenarios = [
       initialState: {
         type: "ephemeris",
         dateTime: "now",
-        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", ...JUPITER_MOONS, "Saturn", ...SATURN_MOONS, "Uranus", "Neptune", "ISS"]
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", ...JUPITER_MOONS, "Saturn", ...SATURN_MOONS, "Uranus", "Neptune", "Pluto", "ISS"]
       },
       stepSeconds: 2,
       mission: { launchSiteId: "baikonur", targetProfileId: "soyuz-iss-live-ish" },

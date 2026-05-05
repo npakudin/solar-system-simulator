@@ -198,6 +198,15 @@ export const bodyCatalog = {
       rotationPeriodHours: 16.1,
       texturePath: "sim-assets/textures/solar-system-scope/neptune.jpg"
     },
+    Pluto: {
+      color: "#c9a87a",
+      mass: 1.307e22,
+      radius: 1.1883e6,
+      displayScale: 3000,
+      axialTiltDeg: 122.53,
+      rotationPeriodHours: -153.293,
+      texturePath: "sim-assets/textures/nasa/pluto.jpg"
+    },
     ISS: {
       color: "#00ffff",
       mass: 420000,

@@ -31,6 +31,13 @@
       "downloadUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg",
       "license": "NASA media, generally public domain; retain credit.",
       "credit": "NASA/Goddard Space Flight Center Scientific Visualization Studio"
+    },
+    {
+      "file": "pluto.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pluto-map-sept-16-2015.jpg",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/30/Pluto-map-sept-16-2015.jpg",
+      "license": "CC BY-SA 4.0",
+      "credit": "NASA/JPL/SwRI — New Horizons mission; via Wikimedia Commons"
     }
   ]
 }

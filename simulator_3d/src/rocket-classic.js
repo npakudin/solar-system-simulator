@@ -321,6 +321,30 @@ const KM_TO_M = 1000;
     return targetNames.has(body.name) || body.name === "Moon" || body.name === "Jupiter";
   }
 
+  function keplerPropagatePosition(r0vec, v0vec, dt, mu) {
+    const sqrtMu = Math.sqrt(mu);
+    const r0 = len(r0vec);
+    const sigma0 = dot(r0vec, v0vec) / sqrtMu;
+    const alpha = 2 / r0 - dot(v0vec, v0vec) / mu;
+    // Initial guess for universal variable χ (elliptic orbit)
+    let chi = sqrtMu * Math.abs(alpha) * dt;
+    for (let i = 0; i < 60; i++) {
+      const psi = alpha * chi * chi;
+      const c = stumpffC(psi);
+      const s = stumpffS(psi);
+      const F = sigma0 * chi * chi * c + (1 - r0 * alpha) * chi * chi * chi * s + r0 * chi - sqrtMu * dt;
+      const dF = sigma0 * chi * (1 - psi * s) + (1 - r0 * alpha) * chi * chi * c + r0;
+      if (Math.abs(dF) < 1e-30) break;
+      const delta = -F / dF;
+      chi += delta;
+      if (Math.abs(delta) < 1) break;
+    }
+    const psi = alpha * chi * chi;
+    const f = 1 - (chi * chi / r0) * stumpffC(psi);
+    const g = dt - (chi * chi * chi / sqrtMu) * stumpffS(psi);
+    return add(multiply(r0vec, f), multiply(v0vec, g));
+  }
+
   function correctionAttitudeDirection(state, bodies, command) {
     const correction = command && command.correction;
     const rocket = state && state.rocket;

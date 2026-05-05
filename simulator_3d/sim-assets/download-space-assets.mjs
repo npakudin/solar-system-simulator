@@ -20,7 +20,8 @@ const horizonsBodies = [
   { id: "599", name: "Jupiter" },
   { id: "699", name: "Saturn" },
   { id: "799", name: "Uranus" },
-  { id: "899", name: "Neptune" }
+  { id: "899", name: "Neptune" },
+  { id: "999", name: "Pluto" }
 ];
 
 const textures = [
@@ -68,6 +69,13 @@ const nasaTextures = [
     url: "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg",
     sourceUrl: "https://svs.gsfc.nasa.gov/4720/",
     credit: "NASA/Goddard Space Flight Center Scientific Visualization Studio"
+  },
+  {
+    file: "pluto.jpg",
+    url: "https://upload.wikimedia.org/wikipedia/commons/3/30/Pluto-map-sept-16-2015.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Pluto-map-sept-16-2015.jpg",
+    credit: "NASA/JPL/SwRI — New Horizons mission; via Wikimedia Commons",
+    license: "CC BY-SA 4.0"
   }
 ];
 

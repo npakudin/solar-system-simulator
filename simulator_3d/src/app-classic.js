@@ -363,7 +363,18 @@ const {
     Saturn: constants.DAY * 14,
     Uranus: constants.DAY * 20,
     Neptune: constants.DAY * 24,
-    Rocket: constants.DAY / 4
+    Rocket: constants.DAY / 4,
+    // Jupiter moons — ~100 samples per orbit for smooth circles
+    Io: constants.DAY * 1.769 / 100,
+    Europa: constants.DAY * 3.551 / 100,
+    Ganymede: constants.DAY * 7.155 / 100,
+    Callisto: constants.DAY * 16.689 / 100,
+    // Saturn moons
+    Titan: constants.DAY * 15.945 / 100,
+    Rhea: constants.DAY * 4.518 / 100,
+    Iapetus: constants.DAY * 79.322 / 100,
+    Dione: constants.DAY * 2.737 / 100,
+    Enceladus: constants.DAY * 1.37 / 100,
   };
 
   let activeScenarioId = SolarScenarioData.defaultScenarioId;
@@ -1689,6 +1700,10 @@ const {
   }
 
   function updateLaunchSiteMarkers() {
+    if (isRealisticSizesEnabled()) {
+      for (const m of launchSiteMarkers) m.dot.visible = false;
+      return;
+    }
     const earth = bodies.find(b => b.name === 'Earth');
     if (!earth) {
       for (const m of launchSiteMarkers) m.dot.visible = false;
@@ -1794,7 +1809,7 @@ const {
       metersToUnits: view.metersToUnits || DEFAULT_METERS_TO_UNITS,
       radiusScale: view.radiusScale || DEFAULT_RADIUS_TO_UNITS,
       useDisplayScale: !realisticSizes && view.useDisplayScale === true,
-      minBodyRadius: realisticSizes ? 0 : (view.minBodyRadius ?? 0.45),
+      minBodyRadius: realisticSizes ? 0.001 : (view.minBodyRadius ?? 0.45),
       markers: view.markers !== false
     };
   }
@@ -1827,6 +1842,7 @@ const {
   }
 
   function shouldShowMarker(body) {
+    if (isRealisticSizesEnabled()) return false;
     const radius = getBodyVisualRadius(body);
     return body.name === "Rocket" || radius < 0.3;
   }
