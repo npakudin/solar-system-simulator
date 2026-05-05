@@ -33,7 +33,7 @@ export const bodyCatalog = {
       displayScale: 900,
       axialTiltDeg: 23.44,
       rotationPeriodHours: 23.9344696,
-      texturePath: "sim-assets/textures/solar-system-scope/earth_daymap.jpg",
+      texturePath: "sim-assets/textures/nasa/earth_blue_marble_8192.jpg",
       ellipsoid: {
         equatorialRadiusM: 6378137,
         polarRadiusM: 6356752.314245,

@@ -538,7 +538,7 @@ const {
   let saturnRingTexture = null;
   const textureLoader = new THREE.TextureLoader();
 
-  // Mirror horizontally for all spheres: physics Y → scene Z inverts east/west handedness.
+  // Most legacy sphere textures were authored against the app's handedness mapping.
   function mirrorTex(tex) {
     tex.wrapS = THREE.RepeatWrapping;
     tex.repeat.set(-1, 1);
@@ -556,7 +556,9 @@ const {
 
   for (const [name, path] of Object.entries(BODY_TEXTURES)) {
     textureLoader.load(path, (tex) => {
-      mirrorTex(tex);
+      if (name !== "Earth") {
+        mirrorTex(tex);
+      }
       textures[name] = tex;
       const mesh = bodyMeshes.get(name);
       if (mesh) applyBodyTexture(mesh, name, tex);
