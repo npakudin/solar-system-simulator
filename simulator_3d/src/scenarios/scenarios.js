@@ -6,6 +6,7 @@ export const defaultScenarioId = "voyager-2-grand-tour";
 const JUPITER_MOONS = ["Io", "Europa", "Ganymede", "Callisto"];
 const SATURN_MOONS = ["Titan", "Rhea", "Iapetus", "Dione", "Enceladus"];
 const MARS_MOONS = ["Phobos", "Deimos"];
+const FAMOUS_SMALL_BODIES = ["Ceres", "Vesta", "Halley", "ChuryumovGerasimenko", "Ryugu", "Bennu", "Eros", "Itokawa", "Apophis"];
 
 export const scenarios = [
     {
@@ -89,6 +90,38 @@ export const scenarios = [
       view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.35, markers: true },
       camera: { position: [0, 95, 170], target: [0, 0, 0], maxDistance: 1400 },
       ui: { cameraTarget: "earth", timeScale: 60 }
+    },
+    {
+      id: "small-bodies-showcase",
+      label: "Famous comets and asteroids",
+      description: "Low-precision JPL SBDB element visualization for famous small bodies: Halley, 67P, Ryugu, Bennu, Eros, Itokawa, Apophis, Ceres, and Vesta.",
+      flybyTargets: ["Halley", "ChuryumovGerasimenko", "Ryugu", "Bennu", "Apophis"],
+      initialState: {
+        type: "ephemeris",
+        dateTime: "2026-05-05T00:00:00Z",
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", ...FAMOUS_SMALL_BODIES]
+      },
+      referenceOrbits: [],
+      stepSeconds: 21600,
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.18, markers: true },
+      camera: { position: [0, 110, 190], target: [0, 0, 0], maxDistance: 1600 },
+      ui: { cameraTarget: "sun", timeScale: 120 }
+    },
+    {
+      id: "oumuamua-2017-flyby",
+      label: "1I/'Oumuamua — interstellar flyby",
+      description: "Hyperbolic 2017 inner-solar-system pass of the first confirmed interstellar object.",
+      flybyTargets: ["Oumuamua", "Earth"],
+      initialState: {
+        type: "ephemeris",
+        dateTime: "2017-09-09T00:00:00Z",
+        includeBodies: ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Oumuamua"]
+      },
+      referenceOrbits: [],
+      stepSeconds: 3600,
+      view: { metersToUnits: 1.0e-10, radiusScale: 1.0e-10, useDisplayScale: true, minBodyRadius: 0.2, markers: true },
+      camera: { position: [0, 70, 120], target: [0, 0, 0], maxDistance: 900 },
+      ui: { cameraTarget: "oumuamua", timeScale: 40 }
     },
     {
       id: "toy-earth-rocket",

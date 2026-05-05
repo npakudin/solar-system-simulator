@@ -229,6 +229,116 @@ export const bodyCatalog = {
       rotationPeriodHours: -153.293,
       texturePath: "sim-assets/textures/nasa/pluto.jpg"
     },
+    Ceres: {
+      kind: "asteroid",
+      color: "#8e877d",
+      mass: 0,
+      radius: 4.697e5,
+      displayScale: 1000,
+      axialTiltDeg: 4,
+      rotationPeriodHours: 9.07417,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 2.77, eccentricity: 0.0796, inclinationDeg: 10.6, ascendingNodeDeg: 80.2, argPerihelionDeg: 73.3, meanAnomalyDeg: 232, meanMotionDegPerDay: 0.214 }
+    },
+    Vesta: {
+      kind: "asteroid",
+      color: "#b0a79a",
+      mass: 0,
+      radius: 2.61385e5,
+      displayScale: 1400,
+      axialTiltDeg: 27,
+      rotationPeriodHours: 5.3421276322,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 2.36, eccentricity: 0.0902, inclinationDeg: 7.14, ascendingNodeDeg: 104, argPerihelionDeg: 152, meanAnomalyDeg: 26.8, meanMotionDegPerDay: 0.272 }
+    },
+    Halley: {
+      kind: "comet",
+      color: "#d8d1c8",
+      mass: 0,
+      radius: 5.5e3,
+      displayScale: 25000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 52.8,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2439875.5, semiMajorAxisAu: 17.9, eccentricity: 0.968, inclinationDeg: 162, ascendingNodeDeg: 59.1, argPerihelionDeg: 112, meanAnomalyDeg: 274, meanMotionDegPerDay: 0.013 }
+    },
+    ChuryumovGerasimenko: {
+      kind: "comet",
+      color: "#9b9188",
+      mass: 0,
+      radius: 1.7e3,
+      displayScale: 80000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 12.76129,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2457305.5, semiMajorAxisAu: 3.46, eccentricity: 0.641, inclinationDeg: 7.04, ascendingNodeDeg: 50.1, argPerihelionDeg: 12.8, meanAnomalyDeg: 8.86, meanMotionDegPerDay: 0.153 }
+    },
+    Ryugu: {
+      kind: "asteroid",
+      color: "#7f746a",
+      mass: 0,
+      radius: 448,
+      displayScale: 180000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 7.63262,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 1.19, eccentricity: 0.191, inclinationDeg: 5.87, ascendingNodeDeg: 251, argPerihelionDeg: 212, meanAnomalyDeg: 271, meanMotionDegPerDay: 0.758 }
+    },
+    Bennu: {
+      kind: "asteroid",
+      color: "#6f6860",
+      mass: 0,
+      radius: 242,
+      displayScale: 300000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 4.296061,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2455562.5, semiMajorAxisAu: 1.13, eccentricity: 0.204, inclinationDeg: 6.03, ascendingNodeDeg: 2.06, argPerihelionDeg: 66.2, meanAnomalyDeg: 102, meanMotionDegPerDay: 0.824 }
+    },
+    Eros: {
+      kind: "asteroid",
+      color: "#a49180",
+      mass: 0,
+      radius: 8.42e3,
+      displayScale: 20000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 5.27,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 1.46, eccentricity: 0.223, inclinationDeg: 10.8, ascendingNodeDeg: 304, argPerihelionDeg: 179, meanAnomalyDeg: 311, meanMotionDegPerDay: 0.56 }
+    },
+    Itokawa: {
+      kind: "asteroid",
+      color: "#9c9085",
+      mass: 0,
+      radius: 165,
+      displayScale: 400000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 12.132,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 1.32, eccentricity: 0.28, inclinationDeg: 1.62, ascendingNodeDeg: 69.1, argPerihelionDeg: 163, meanAnomalyDeg: 41.3, meanMotionDegPerDay: 0.647 }
+    },
+    Apophis: {
+      kind: "asteroid",
+      color: "#b59a7c",
+      mass: 0,
+      radius: 170,
+      displayScale: 400000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 30.56,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2461000.5, semiMajorAxisAu: 0.922, eccentricity: 0.191, inclinationDeg: 3.34, ascendingNodeDeg: 204, argPerihelionDeg: 127, meanAnomalyDeg: 313, meanMotionDegPerDay: 1.11 }
+    },
+    Oumuamua: {
+      kind: "interstellar",
+      color: "#c2a07e",
+      mass: 0,
+      radius: 80,
+      displayScale: 500000,
+      axialTiltDeg: 0,
+      rotationPeriodHours: 7.937,
+      isSatellite: true,
+      heliocentricOrbit: { epochJd: 2458080.5, semiMajorAxisAu: -1.27, eccentricity: 1.2, inclinationDeg: 123, ascendingNodeDeg: 24.6, argPerihelionDeg: 242, meanAnomalyDeg: 51.2, meanMotionDegPerDay: 0.687 }
+    },
     ISS: {
       color: "#00ffff",
       mass: 420000,

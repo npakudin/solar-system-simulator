@@ -309,6 +309,10 @@ const {
     sv: { Sun: "Solen", Earth: "Jorden", Moon: "Månen", Jupiter: "Jupiter", Rocket: "Raket" },
     kk: { Sun: "Күн", Earth: "Жер", Moon: "Ай", Jupiter: "Юпитер", Rocket: "Зымыран" }
   };
+  const CAMERA_PLANET_ORDER = ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"];
+  const CAMERA_PLANETOID_ORDER = ["Pluto"];
+  const CAMERA_SATELLITE_PARENTS = { Moon: "Earth", ISS: "Earth" };
+  const CAMERA_CHILD_INDENT = "\u00a0\u00a0\u00a0\u00a0";
   const SCENARIO_LABELS = {
     ru: {
       "voyager-2-grand-tour": "Вояджер-2 — большой тур (1977)",
@@ -364,17 +368,6 @@ const {
     Uranus: constants.DAY * 20,
     Neptune: constants.DAY * 24,
     Rocket: constants.DAY / 4,
-    // Jupiter moons — ~100 samples per orbit for smooth circles
-    Io: constants.DAY * 1.769 / 100,
-    Europa: constants.DAY * 3.551 / 100,
-    Ganymede: constants.DAY * 7.155 / 100,
-    Callisto: constants.DAY * 16.689 / 100,
-    // Saturn moons
-    Titan: constants.DAY * 15.945 / 100,
-    Rhea: constants.DAY * 4.518 / 100,
-    Iapetus: constants.DAY * 79.322 / 100,
-    Dione: constants.DAY * 2.737 / 100,
-    Enceladus: constants.DAY * 1.37 / 100,
   };
 
   let activeScenarioId = SolarScenarioData.defaultScenarioId;
@@ -1254,19 +1247,19 @@ const {
   function syncCameraOptions() {
     const previousValue = cameraTargetSelect.value;
     const values = new Set(["free"]);
-    const bodyNames = bodies.map((body) => body.name.toLowerCase());
-    if (activeScenario.rocket || currentMission()) {
-      bodyNames.push("rocket");
+    const cameraOptions = orderedCameraBodyOptions(bodies);
+    if (activeScenario.rocket || currentMission() || bodies.some((body) => body.name === "Rocket")) {
+      cameraOptions.unshift({ value: "rocket", labelName: "Rocket" });
     }
 
     cameraTargetSelect.replaceChildren();
     addCameraOption("free", t("freeCamera"));
-    for (const name of bodyNames) {
-      if (values.has(name)) {
+    for (const option of cameraOptions) {
+      if (values.has(option.value)) {
         continue;
       }
-      values.add(name);
-      addCameraOption(name, bodyLabel(name));
+      values.add(option.value);
+      addCameraOption(option.value, `${option.indent || ""}${bodyLabel(option.labelName)}`);
     }
 
     if (values.has(previousValue)) {
@@ -1283,6 +1276,93 @@ const {
     option.value = value;
     option.textContent = label;
     cameraTargetSelect.append(option);
+  }
+
+  function orderedCameraBodyOptions(currentBodies) {
+    const bodyByName = new Map(currentBodies.map((body) => [body.name, body]));
+    const options = [];
+    const added = new Set();
+
+    addCameraBodyOption(options, added, bodyByName.get("Sun"));
+
+    for (const planetName of CAMERA_PLANET_ORDER) {
+      addCameraBodyOption(options, added, bodyByName.get(planetName));
+      const satellites = currentBodies
+        .filter((body) => cameraSatelliteParent(body) === planetName)
+        .sort(compareCameraSatellites);
+      for (const satellite of satellites) {
+        addCameraBodyOption(options, added, satellite, CAMERA_CHILD_INDENT);
+      }
+
+      if (planetName === "Mars") {
+        addCameraMinorBodies(options, added, currentBodies, isCameraAsteroid);
+      }
+    }
+
+    for (const planetoidName of CAMERA_PLANETOID_ORDER) {
+      addCameraBodyOption(options, added, bodyByName.get(planetoidName));
+      const satellites = currentBodies
+        .filter((body) => cameraSatelliteParent(body) === planetoidName)
+        .sort(compareCameraSatellites);
+      for (const satellite of satellites) {
+        addCameraBodyOption(options, added, satellite, CAMERA_CHILD_INDENT);
+      }
+    }
+
+    addCameraMinorBodies(options, added, currentBodies, isCameraComet);
+
+    for (const body of currentBodies) {
+      addCameraBodyOption(options, added, body, cameraSatelliteParent(body) ? CAMERA_CHILD_INDENT : "");
+    }
+
+    return options;
+  }
+
+  function addCameraBodyOption(options, added, body, indent = "") {
+    if (!body || added.has(body.name)) {
+      return;
+    }
+    added.add(body.name);
+    options.push({
+      value: body.name.toLowerCase(),
+      labelName: body.name,
+      indent
+    });
+  }
+
+  function addCameraMinorBodies(options, added, currentBodies, predicate) {
+    const minorBodies = currentBodies
+      .filter((body) => predicate(body))
+      .sort(compareCameraBodiesByName);
+    for (const body of minorBodies) {
+      addCameraBodyOption(options, added, body);
+    }
+  }
+
+  function cameraSatelliteParent(body) {
+    const catalog = SolarScenarioData.bodyCatalog[body.name] || {};
+    if (catalog.kinematicOrbit && catalog.kinematicOrbit.parent) {
+      return catalog.kinematicOrbit.parent;
+    }
+    return CAMERA_SATELLITE_PARENTS[body.name] || null;
+  }
+
+  function compareCameraSatellites(a, b) {
+    return (b.radius || 0) - (a.radius || 0) || compareCameraBodiesByName(a, b);
+  }
+
+  function compareCameraBodiesByName(a, b) {
+    return bodyLabel(a.name).localeCompare(bodyLabel(b.name), currentLanguage);
+  }
+
+  function isCameraAsteroid(body) {
+    const catalog = SolarScenarioData.bodyCatalog[body.name] || {};
+    return catalog.kind === "asteroid";
+  }
+
+  function isCameraComet(body) {
+    const catalog = SolarScenarioData.bodyCatalog[body.name] || {};
+    return catalog.kind === "comet" || catalog.kind === "interstellar";
   }
 
   function scenarioLabel(scenario) {
@@ -1325,10 +1405,11 @@ const {
         } else {
           mesh.scale.setScalar(radius);
         }
+        const spinAngle = getBodySpinAngle(body);
         if (mesh.userData && mesh.userData.spinNode) {
-          mesh.userData.spinNode.rotation.y = getBodySpinAngle(body);
+          mesh.userData.spinNode.rotation.y = spinAngle;
         } else {
-          mesh.rotation.y = getBodySpinAngle(body);
+          mesh.rotation.y = spinAngle;
         }
         if (body.name === "Saturn") {
           updateSaturnShadows(mesh, body);
@@ -1348,11 +1429,27 @@ const {
   }
 
   function getBodySpinAngle(body) {
+    if (body.name === "Moon") {
+      return getMoonSynchronousSpinAngle(body);
+    }
     const periodHours = body.rotationPeriodHours;
     if (!periodHours) {
       return 0;
     }
     return -elapsedSeconds / (Math.abs(periodHours) * 3600) * Math.PI * 2 * Math.sign(periodHours);
+  }
+
+  function getMoonSynchronousSpinAngle(moon) {
+    const earth = bodies.find((body) => body.name === "Earth");
+    if (!earth) {
+      return 0;
+    }
+    const dx = moon.position.x - earth.position.x;
+    const dy = moon.position.y - earth.position.y;
+    if (dx === 0 && dy === 0) {
+      return 0;
+    }
+    return -Math.atan2(dy, dx) + Math.PI;
   }
 
   function updateSaturnShadows(mesh, saturn) {
@@ -1389,7 +1486,7 @@ const {
 
       const interval = body.name === "Rocket"
         ? rocketInterval
-        : (TRAIL_SAMPLE_SECONDS[body.name] || constants.DAY * 3);
+        : getTrailSampleInterval(body);
       if (elapsedSeconds < trail.nextSampleTime) {
         continue;
       }
@@ -1397,6 +1494,13 @@ const {
       appendTrailPoint(trail, getBodyScenePosition(body));
       trail.nextSampleTime = elapsedSeconds + interval;
     }
+  }
+
+  function getTrailSampleInterval(body) {
+    if (body.kinematicOrbit && Number.isFinite(body.kinematicOrbit.periodDays)) {
+      return Math.max(1, constants.DAY * body.kinematicOrbit.periodDays / 100);
+    }
+    return TRAIL_SAMPLE_SECONDS[body.name] || constants.DAY * 3;
   }
 
   function appendTrailPoint(trail, scenePosition) {
@@ -1782,12 +1886,12 @@ const {
 
   function getBodyScenePosition(body) {
     const basePosition = toScenePosition(body.position);
-    const orbit = body.kinematicOrbit;
-    if (!orbit || !getViewConfig().useDisplayScale) {
+    const parentName = getDisplayOrbitParentName(body);
+    if (!parentName || !getViewConfig().useDisplayScale) {
       return basePosition;
     }
 
-    const parent = bodies.find((candidate) => candidate.name === orbit.parent);
+    const parent = bodies.find((candidate) => candidate.name === parentName);
     if (!parent) {
       return basePosition;
     }
@@ -1800,12 +1904,31 @@ const {
 
     const physicalSceneDistance = relativeScene.length();
     const parentVisualRadius = getBodyVisualRadius(parent);
-    const visualOrbitDistance = Math.max(
-      physicalSceneDistance,
-      parentVisualRadius * (orbit.radiusM / parent.radius)
-    );
+    const visualOrbitDistance = Math.max(physicalSceneDistance, getMinimumDisplayOrbitDistance(body, parent));
 
     return parentPosition.add(relativeScene.normalize().multiplyScalar(visualOrbitDistance));
+  }
+
+  function getMinimumDisplayOrbitDistance(body, parent) {
+    if (body.name === "Moon" && parent.name === "Earth") {
+      return parentVisualSeparation(parent, body);
+    }
+    const physicalDistanceRatio = distance(body.position, parent.position) / parent.radius;
+    return getBodyVisualRadius(parent) * physicalDistanceRatio;
+  }
+
+  function parentVisualSeparation(parent, child) {
+    return getBodyVisualRadius(parent) + getBodyVisualRadius(child) * 1.15;
+  }
+
+  function getDisplayOrbitParentName(body) {
+    if (body.kinematicOrbit && body.kinematicOrbit.parent) {
+      return body.kinematicOrbit.parent;
+    }
+    if (body.name === "Moon") {
+      return "Earth";
+    }
+    return null;
   }
 
   function getViewConfig() {

@@ -105,6 +105,19 @@ export function moonState(jd, earthState = planetState("Earth", jd)) {
   };
 }
 
+export function smallBodyStateFromElements(elements, jd) {
+  const position = smallBodyPositionFromElements(elements, jd);
+  const dt = 60;
+  const velocity = multiply(
+    subtract(
+      smallBodyPositionFromElements(elements, jd + dt / DAY),
+      smallBodyPositionFromElements(elements, jd - dt / DAY)
+    ),
+    1 / (2 * dt)
+  );
+  return { position, velocity };
+}
+
 export function parseDateTime(dateTime) {
   if (dateTime === "now") {
     return new Date();
@@ -146,6 +159,29 @@ function planetPosition(name, jd) {
   return rotateFromOrbitalPlane(xPrime, yPrime, omega, i, argPeriapsis);
 }
 
+function smallBodyPositionFromElements(elements, jd) {
+  const e = elements.eccentricity;
+  const a = elements.semiMajorAxisAu * AU_M;
+  const i = elements.inclinationDeg * DEG2RAD;
+  const omega = elements.ascendingNodeDeg * DEG2RAD;
+  const argPeriapsis = elements.argPerihelionDeg * DEG2RAD;
+  const meanMotion = elements.meanMotionDegPerDay * DEG2RAD;
+  const meanAnomaly = (elements.meanAnomalyDeg * DEG2RAD) + meanMotion * (jd - elements.epochJd);
+
+  if (e < 1) {
+    const M = wrapRadians(meanAnomaly);
+    const E = solveKepler(M, e);
+    const xPrime = a * (Math.cos(E) - e);
+    const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
+    return rotateFromOrbitalPlane(xPrime, yPrime, omega, i, argPeriapsis);
+  }
+
+  const H = solveHyperbolicKepler(meanAnomaly, e);
+  const xPrime = a * (Math.cosh(H) - e);
+  const yPrime = -a * Math.sqrt(e * e - 1) * Math.sinh(H);
+  return rotateFromOrbitalPlane(xPrime, yPrime, omega, i, argPeriapsis);
+}
+
 function moonRelativePosition(jd) {
   const days = jd - J2000_JD;
   const meanLongitude = wrapRadians((MOON.meanLongitudeDeg + MOON.meanLongitudeRateDegPerDay * days) * DEG2RAD);
@@ -183,6 +219,17 @@ function solveKepler(meanAnomaly, eccentricity) {
     E -= f / fp;
   }
   return E;
+}
+
+function solveHyperbolicKepler(meanAnomaly, eccentricity) {
+  const sign = meanAnomaly < 0 ? -1 : 1;
+  let H = sign * Math.log((2 * Math.abs(meanAnomaly)) / eccentricity + 1.8);
+  for (let i = 0; i < 20; i += 1) {
+    const f = eccentricity * Math.sinh(H) - H - meanAnomaly;
+    const fp = eccentricity * Math.cosh(H) - 1;
+    H -= f / fp;
+  }
+  return H;
 }
 
 function valueAt(pair, T) {

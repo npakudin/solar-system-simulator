@@ -1,7 +1,7 @@
 import { add, subtract, multiply, cross, normalize, normalizeOrFallback, distance, len } from './vec3.js';
 import { G, DAY, YEAR } from './constants.js';
 import { SolarScenarioData } from './scenario-data.js';
-import { createEphemerisBodyStates } from './ephemeris.js';
+import { createEphemerisBodyStates, julianDate, smallBodyStateFromElements } from './ephemeris.js';
 
 const SOFTENING = 1.0e5;
 const KM_TO_M = 1000;
@@ -23,7 +23,8 @@ const scenarioData = SolarScenarioData;
       ellipsoid = null,
       rings = null,
       isSatellite = false,
-      kinematicOrbit = null
+      kinematicOrbit = null,
+      heliocentricOrbit = null
     }) {
       this.name = name;
       this.color = color;
@@ -40,6 +41,7 @@ const scenarioData = SolarScenarioData;
       this.rings = rings;
       this.isSatellite = isSatellite;
       this.kinematicOrbit = kinematicOrbit;
+      this.heliocentricOrbit = heliocentricOrbit;
       this._orbitTimeSeconds = 0;
     }
   }
@@ -85,6 +87,7 @@ const scenarioData = SolarScenarioData;
       rings: body.rings,
       isSatellite: body.isSatellite || false,
       kinematicOrbit: body.kinematicOrbit,
+      heliocentricOrbit: body.heliocentricOrbit,
       position: body.position,
       velocity: body.velocity
     });
@@ -136,39 +139,40 @@ const scenarioData = SolarScenarioData;
   function createBodiesForScenario(scenario, options = {}) {
     const initialState = scenario.initialState;
     if (initialState.type === "ephemeris") {
+      const dateTime = options.dateTime || initialState.dateTime || new Date();
       const states = createEphemerisBodyStates({
-        dateTime: options.dateTime || initialState.dateTime || new Date(),
+        dateTime,
         includeBodies: initialState.includeBodies,
         satelliteLib: options.satelliteLib,
         maxTleAgeDays: options.maxTleAgeDays
       });
-      return withKinematicSatellites(states.map((body) => createCatalogBody({
+      return withCatalogOrbits(states.map((body) => createCatalogBody({
         name: body.name,
         position: body.position,
         velocity: body.velocity
-      })), initialState.includeBodies);
+      })), initialState.includeBodies, dateTime);
     }
 
     if (initialState.type === "vectors") {
       const included = initialState.includeBodies && new Set(initialState.includeBodies);
-      return withKinematicSatellites(initialState.bodies
+      return withCatalogOrbits(initialState.bodies
         .filter((body) => !included || included.has(body.name))
         .map((body) => createCatalogBody({
           name: body.name,
           position: vectorFromArray(body.positionKm, KM_TO_M),
           velocity: vectorFromArray(body.velocityKmS, KM_TO_M)
-        })), initialState.includeBodies);
+        })), initialState.includeBodies, initialState.dateTime);
     }
 
     if (initialState.type === "absolute") {
-      return withKinematicSatellites(initialState.bodies.map((body) => createCatalogBody({
+      return withCatalogOrbits(initialState.bodies.map((body) => createCatalogBody({
         name: body.name,
         position: vectorFromArray(body.position, 1),
         velocity: vectorFromArray(body.velocity, 1)
-      })), initialState.includeBodies);
+      })), initialState.includeBodies, initialState.dateTime);
     }
 
-    return withKinematicSatellites(initialState.bodies.map((body) => {
+    return withCatalogOrbits(initialState.bodies.map((body) => {
       if (body.orbitRadius) {
         return circularBody({
           ...catalogDefaults(body.name),
@@ -184,7 +188,7 @@ const scenarioData = SolarScenarioData;
         position: vectorFromArray(body.position, 1),
         velocity: vectorFromArray(body.velocity, 1)
       });
-    }), initialState.includeBodies);
+    }), initialState.includeBodies, initialState.dateTime);
   }
 
   function createCatalogBody({ name, position, velocity }) {
@@ -195,7 +199,7 @@ const scenarioData = SolarScenarioData;
     });
   }
 
-  function withKinematicSatellites(baseBodies, includeBodies) {
+  function withCatalogOrbits(baseBodies, includeBodies, dateTime) {
     const included = includeBodies && new Set(includeBodies);
     const bodyNames = new Set(baseBodies.map((body) => body.name));
     const bodies = [...baseBodies];
@@ -214,6 +218,25 @@ const scenarioData = SolarScenarioData;
         velocity: { x: 0, y: 0, z: 0 }
       });
       applyKinematicOrbit(body, bodies, 0);
+      bodies.push(body);
+      bodyNames.add(name);
+    }
+
+    const jd = dateTime ? julianDate(dateTime) : null;
+    for (const [name, catalog] of Object.entries(scenarioData.bodyCatalog)) {
+      const orbit = catalog.heliocentricOrbit;
+      if (!orbit || bodyNames.has(name) || !bodyNames.has("Sun")) {
+        continue;
+      }
+      if (included && !included.has(name)) {
+        continue;
+      }
+      const state = smallBodyStateFromElements(orbit, jd || orbit.epochJd);
+      const body = createCatalogBody({
+        name,
+        position: state.position,
+        velocity: state.velocity
+      });
       bodies.push(body);
       bodyNames.add(name);
     }
@@ -239,7 +262,8 @@ const scenarioData = SolarScenarioData;
       ellipsoid: catalog.ellipsoid || null,
       rings: catalog.rings || null,
       isSatellite: catalog.isSatellite || false,
-      kinematicOrbit: catalog.kinematicOrbit || null
+      kinematicOrbit: catalog.kinematicOrbit || null,
+      heliocentricOrbit: catalog.heliocentricOrbit || null
     };
   }
 
